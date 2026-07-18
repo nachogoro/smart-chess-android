@@ -2,4 +2,31 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+      BLE permissions.
+
+      Android 12 (API 31) and above use the granular Bluetooth permissions. We declare
+      neverForLocation on BLUETOOTH_SCAN because the app does not derive physical location
+      from scan results - it only looks for a chess board.
+
+      Android 11 (API 30) and below required location permission to scan for BLE devices, so
+      ACCESS_FINE_LOCATION is declared with maxSdkVersion 30.
+    -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
+        tools:targetApi="s" />
+
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" />
+
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="true" />
+
 </manifest>
