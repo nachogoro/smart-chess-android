@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The UI is entirely Compose; this theme only styles the window before Compose takes over.
+      Colours are supplied by the Compose theme in ui/theme.
+    -->
+    <style name="Theme.SmartChess" parent="android:Theme.Material.NoActionBar" />
+</resources>
