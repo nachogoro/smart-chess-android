@@ -23,6 +23,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import scp.engine.carballo.CarballoAdapter
 import scp.game.GameController
+import scp.remote.lichess.LichessAdapter
 import scp.orchestrator.GameSession
 import scp.orchestrator.Orchestrator
 import scp.orchestrator.OrchestratorState
@@ -70,7 +71,7 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
      * offer engine play.
      */
     private val engines: List<EngineAdapterModule> = listOf(CarballoAdapter())
-    private val remotes: List<RemoteAdapterModule> = emptyList()
+    private val remotes: List<RemoteAdapterModule> = listOf(LichessAdapter(moduleScope))
 
     private val orchestrator = Orchestrator(
         board = board,
@@ -152,7 +153,30 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
     fun startGame(mode: GameMode) {
         _setupMode.value = mode
         _screen.value = Screen.GAME_SETUP
+        // A withdrawn seek leaves the orchestrator already asking which mode to play. Answering
+        // that outstanding prompt is enough; emitting again would start a second setup flow
+        // alongside the first. The setup screen answers it as soon as it composes.
+        if (uiModule.pendingGameModeSelection == null) {
+            viewModelScope.launch { uiModule.requestNewGame() }
+        }
+    }
+
+    /**
+     * Withdraws a seek that is waiting for a remote opponent.
+     *
+     * Cancelling the pending UI requests is not enough here: by the time the app is seeking, the
+     * orchestrator has already returned from its setup flow and is waiting on the platform, so
+     * there is no prompt left to cancel and the seek would stay live on the server.
+     *
+     * Re-requesting a new game is the orchestrator's documented escape hatch - it withdraws the
+     * seek, tears the session down and returns to idle. It then immediately asks which mode to
+     * play again, which [startGame] answers rather than duplicating.
+     */
+    fun cancelSeek() {
+        uiModule.cancelAllPendingRequests()
         viewModelScope.launch { uiModule.requestNewGame() }
+        _setupMode.value = null
+        _screen.value = Screen.MAIN_MENU
     }
 
     fun cancelSetup() {

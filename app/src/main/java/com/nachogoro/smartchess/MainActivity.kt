@@ -85,6 +85,7 @@ private fun SmartChessApp(viewModel: ChessViewModel = viewModel()) {
                 onBack = viewModel::cancelSetup,
                 onGameStarted = viewModel::onGameStarted,
                 onSaveModuleSettings = viewModel::saveModuleSettings,
+                onCancelSeek = viewModel::cancelSeek,
             )
         }
 

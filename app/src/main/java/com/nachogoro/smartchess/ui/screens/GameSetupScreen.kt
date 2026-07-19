@@ -37,10 +37,13 @@ import com.nachogoro.smartchess.ui.components.ParameterFormFields
 import com.nachogoro.smartchess.ui.components.rememberParameterFormState
 import scp.protocol.Color
 import scp.protocol.ConfigureEngineGameParams
+import scp.protocol.ConfigureRemoteGameParams
 import scp.protocol.EngineGameConfig
 import scp.protocol.EngineInfo
 import scp.protocol.GameMode
 import scp.protocol.LocalGameConfig
+import scp.protocol.PlatformInfo
+import scp.protocol.RemoteGameConfig
 import scp.protocol.TimeControl
 import scp.protocol.TimeControlType
 
@@ -59,6 +62,7 @@ fun GameSetupScreen(
     onBack: () -> Unit,
     onGameStarted: () -> Unit,
     onSaveModuleSettings: (String, Map<String, String>) -> Unit,
+    onCancelSeek: () -> Unit,
 ) {
     // The mode was already chosen in the main menu, so answer that question automatically.
     val pendingMode = uiModule.pendingGameModeSelection
@@ -78,6 +82,8 @@ fun GameSetupScreen(
 
     val pendingLocal = uiModule.pendingLocalGameConfig
     val pendingEngineConfig = uiModule.pendingEngineGameConfig
+    val pendingPlatform = uiModule.pendingRemotePlatformSelection
+    val pendingRemoteConfig = uiModule.pendingRemoteGameConfig
 
     Column(
         modifier = Modifier
@@ -120,13 +126,55 @@ fun GameSetupScreen(
                 },
             )
 
+            pendingRemoteConfig != null -> RemoteGameForm(
+                params = pendingRemoteConfig.input,
+                savedPlatformValues = settings.settingsFor(pendingRemoteConfig.input.platform),
+                savedSeekValues = settings.settingsFor(seekSettingsKey(pendingRemoteConfig.input.platform)),
+                onSubmit = { config, platformValues, seekValues ->
+                    val platform = pendingRemoteConfig.input.platform
+                    onSaveModuleSettings(platform, platformValues)
+                    onSaveModuleSettings(seekSettingsKey(platform), seekValues)
+                    pendingRemoteConfig.complete(config)
+                },
+                onCancel = {
+                    pendingRemoteConfig.cancel()
+                    onBack()
+                },
+            )
+
+            pendingPlatform != null -> PlatformPicker(
+                platforms = pendingPlatform.input,
+                onSelect = { pendingPlatform.complete(it.platform) },
+                onCancel = {
+                    pendingPlatform.cancel()
+                    onBack()
+                },
+            )
+
+            // Seeking is not a pending request: the orchestrator has finished setup and is waiting
+            // on the platform. Backing out therefore has to withdraw the seek explicitly rather
+            // than cancel a prompt, or the seek stays live on the server after the user has left.
+            uiModule.isSeeking -> WaitingForOrchestrator(
+                message = "Looking for an opponent...",
+                onCancel = onCancelSeek,
+            )
+
             else -> WaitingForOrchestrator(
-                message = if (uiModule.isSeeking) "Looking for an opponent..." else "Preparing game...",
+                message = "Preparing game...",
                 onCancel = onBack,
             )
         }
     }
 }
+
+/**
+ * Settings key for a platform's seek defaults.
+ *
+ * Kept separate from the platform's own settings because the two have different lifetimes: the API
+ * token is entered once and kept, while a seek is a per-game choice that only defaults to last
+ * time's. Separate keys also avoid one set's parameter names colliding with the other's.
+ */
+private fun seekSettingsKey(platform: String): String = "$platform seek"
 
 @Composable
 private fun WaitingForOrchestrator(message: String, onCancel: () -> Unit) {
@@ -321,6 +369,109 @@ private fun EngineGameForm(
             modifier = Modifier.weight(1f).height(50.dp),
         ) { Text("Back") }
     }
+}
+
+/**
+ * Setup for a game against a remote opponent.
+ *
+ * Two independent parameter sets arrive from the adapter: connection settings (a Lichess API token
+ * and the like) and seek settings (time control, rated or casual, which colour). They are rendered
+ * and persisted separately because they have different lifetimes - the token is entered once and
+ * kept, while the seek is a per-game choice that merely defaults to last time's.
+ */
+@Composable
+private fun RemoteGameForm(
+    params: ConfigureRemoteGameParams,
+    savedPlatformValues: Map<String, String>,
+    savedSeekValues: Map<String, String>,
+    onSubmit: (RemoteGameConfig, Map<String, String>, Map<String, String>) -> Unit,
+    onCancel: () -> Unit,
+) {
+    val platformForm = rememberParameterFormState(params.parameters, savedPlatformValues)
+    val seekForm = rememberParameterFormState(params.seekParameters, savedSeekValues)
+    var validationError by remember { mutableStateOf<String?>(null) }
+
+    Text("Play on ${params.platform}", style = MaterialTheme.typography.headlineMedium)
+    Spacer(Modifier.height(8.dp))
+    Text(
+        "Your opponent plays online. Move their pieces on your board as they arrive.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(20.dp))
+
+    SetupErrorBanner(params.errorMessage ?: validationError)
+
+    if (params.parameters.isNotEmpty()) {
+        Text("Account", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(12.dp))
+        ParameterFormFields(platformForm)
+        Spacer(Modifier.height(12.dp))
+    }
+
+    if (params.seekParameters.isNotEmpty()) {
+        Text("Game", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(12.dp))
+        ParameterFormFields(seekForm)
+    }
+
+    Spacer(Modifier.height(20.dp))
+
+    Row(Modifier.fillMaxWidth()) {
+        Button(
+            onClick = {
+                val error = platformForm.validationError() ?: seekForm.validationError()
+                validationError = error
+                if (error != null) return@Button
+                onSubmit(
+                    RemoteGameConfig(
+                        platformSettings = platformForm.toTypedValues(),
+                        seekSettings = seekForm.toTypedValues(),
+                    ),
+                    platformForm.toStringValues(),
+                    seekForm.toStringValues(),
+                )
+            },
+            modifier = Modifier.weight(1f).height(50.dp),
+        ) { Text("Find a game") }
+        Spacer(Modifier.width(12.dp))
+        OutlinedButton(
+            onClick = onCancel,
+            modifier = Modifier.weight(1f).height(50.dp),
+        ) { Text("Back") }
+    }
+}
+
+@Composable
+private fun PlatformPicker(
+    platforms: List<PlatformInfo>,
+    onSelect: (PlatformInfo) -> Unit,
+    onCancel: () -> Unit,
+) {
+    Text("Choose a platform", style = MaterialTheme.typography.headlineMedium)
+    Spacer(Modifier.height(20.dp))
+
+    for (platform in platforms) {
+        OutlinedButton(
+            onClick = { onSelect(platform) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.padding(vertical = 8.dp)) {
+                Text(platform.platform, style = MaterialTheme.typography.titleMedium)
+                if (platform.features.isNotEmpty()) {
+                    Text(
+                        platform.features.joinToString(", "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+    }
+
+    Spacer(Modifier.height(16.dp))
+    OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text("Back") }
 }
 
 @Composable

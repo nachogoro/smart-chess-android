@@ -76,6 +76,31 @@ from a classpath resource, which desktop-oriented libraries often get wrong on A
 `EngineGameFlowTest` plays a real game through the actual orchestrator with a fake board standing
 in for BLE.
 
+## Online play
+
+Games are played through the Lichess Board API (`scp:remote-lichess`). Setup asks for two separate
+parameter sets, which the adapter declares and `ParameterForm` renders: connection settings (the
+API token, masked because the descriptor marks it `sensitive`) and seek settings (time control,
+rated or casual, colour, or a specific opponent). They are persisted under separate keys, because
+the token is entered once and kept while a seek merely defaults to last time's.
+
+Two things behave differently from a local game:
+
+- **The server owns the clocks.** The game is created with `Authority.EXTERNAL`, so no flag-fall
+  timer runs locally and clock values only change when the server sends new ones — which happens on
+  the opponent's move. The on-screen countdown between updates is cosmetic; the displayed time
+  drifts slightly in your favour after your own move and snaps back when the server next reports.
+  Running to zero on screen means nothing: the server decides, and a timeout arrives as a normal
+  game-ended notification.
+- **Withdrawing a seek is not the same as cancelling a prompt.** Once seeking, the orchestrator has
+  finished its setup flow and is waiting on the platform, so there is no outstanding request to
+  cancel. Backing out re-requests a new game, which is the orchestrator's documented path for
+  withdrawing the seek and returning to idle — without it the seek stays live on Lichess after the
+  user has walked away.
+
+Cleartext HTTP is blocked, as it should be for something carrying an API token. Debug builds carry
+a loopback-only exemption so the instrumented tests can use a mock server; release builds do not.
+
 ## Building
 
 ```sh
@@ -99,5 +124,5 @@ The connection screen checks each requirement separately and prompts for whichev
 
 - [x] Local player vs local player
 - [x] Play against an engine (Carballo, on-device)
-- [ ] Play remotely
+- [x] Play remotely (Lichess) — not yet exercised against the live service
 - [ ] Games history with PGN and move-by-move replay
