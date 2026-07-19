@@ -84,6 +84,11 @@ dependencies {
         exclude(group = "net.java.dev.jna", module = "jna")
     }
 
+    // Carballo runs the engine on-device, so engine play needs no network and no API key.
+    implementation("scp:engine-carballo:0.1.0") {
+        exclude(group = "net.java.dev.jna", module = "jna")
+    }
+
     // JNA, Android variant: unlike the desktop jar, this AAR ships libjnidispatch.so per ABI.
     implementation("net.java.dev.jna:jna:5.13.0@aar")
 

@@ -43,5 +43,6 @@ includeBuild("../simple-chess-protocol/scp") {
         substitute(module("scp:protocol")).using(project(":protocol"))
         substitute(module("scp:orchestrator")).using(project(":orchestrator"))
         substitute(module("scp:game-controller")).using(project(":game-controller"))
+        substitute(module("scp:engine-carballo")).using(project(":engine-carballo"))
     }
 }
