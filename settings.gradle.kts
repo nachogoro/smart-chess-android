@@ -45,5 +45,6 @@ includeBuild("../simple-chess-protocol/scp") {
         substitute(module("scp:game-controller")).using(project(":game-controller"))
         substitute(module("scp:engine-carballo")).using(project(":engine-carballo"))
         substitute(module("scp:remote-lichess")).using(project(":remote-lichess"))
+        substitute(module("scp:engine-remote-stockfish")).using(project(":engine-remote-stockfish"))
     }
 }

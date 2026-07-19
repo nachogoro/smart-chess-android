@@ -90,6 +90,12 @@ dependencies {
         exclude(group = "net.java.dev.jna", module = "jna")
     }
 
+    // A second engine, played over the network rather than on-device. Stronger than Carballo at
+    // the cost of needing a connection, so the two are complementary rather than redundant.
+    implementation("scp:engine-remote-stockfish:0.1.0") {
+        exclude(group = "net.java.dev.jna", module = "jna")
+    }
+
     // Online play. Reaches Lichess over OkHttp: the JDK HTTP client the adapter originally used
     // is unavailable on Android below API 34.
     implementation("scp:remote-lichess:0.1.0") {

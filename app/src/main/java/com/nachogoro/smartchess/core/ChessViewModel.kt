@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import scp.engine.carballo.CarballoAdapter
+import scp.engine.remote.RemoteStockfishAdapter
 import scp.game.GameController
 import scp.remote.lichess.LichessAdapter
 import scp.orchestrator.GameSession
@@ -72,7 +73,9 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
      * The main menu is derived from these, so a build without an engine adapter simply does not
      * offer engine play.
      */
-    private val engines: List<EngineAdapterModule> = listOf(CarballoAdapter())
+    // Carballo first: it needs no network, so it is the one that always works.
+    private val engines: List<EngineAdapterModule> =
+        listOf(CarballoAdapter(), RemoteStockfishAdapter())
     private val remotes: List<RemoteAdapterModule> = listOf(LichessAdapter(moduleScope))
 
     private val orchestrator = Orchestrator(

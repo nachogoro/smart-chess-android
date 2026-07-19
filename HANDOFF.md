@@ -54,7 +54,7 @@ the desktop app.
 | **UI** | **This app** — `ui/AndroidUIModule`, Compose |
 | Orchestrator | `simple-chess-protocol/scp`, unchanged |
 | Game Controller | `simple-chess-protocol/scp`, unchanged (wraps the native rules engine) |
-| Engine Adapter | `scp:engine-carballo`, unchanged |
+| Engine Adapter | `scp:engine-carballo` and `scp:engine-remote-stockfish`, unchanged |
 | Remote Adapter | `scp:remote-lichess`, unchanged |
 
 ```
@@ -62,6 +62,7 @@ Physical board ──BLE──> BleBoardModule ──┐
                                           ├──> Orchestrator ──> Game Controller ──> native rules engine
               AndroidUIModule (Compose) ──┘         │
                                                     ├──> CarballoAdapter    (on-device engine)
+                                                    ├──> RemoteStockfishAdapter (chess-api.com)
                                                     └──> LichessAdapter     (online play)
 ```
 
@@ -91,7 +92,8 @@ renders any such list generically.
 
 This is why adding an engine or platform needs no UI work. Carballo's "target Elo" field appearing
 only once strength limiting is enabled is not coded anywhere in this app; it falls out of the
-descriptor. Adapters reject options they did not declare, so **hidden fields must not be submitted**
+descriptor. The claim has been tested rather than assumed: adding a second engine (remote Stockfish)
+touched the two Gradle files and one line of `ChessViewModel`, and no UI file at all. Adapters reject options they did not declare, so **hidden fields must not be submitted**
 — `toTypedValues()` filters to visible descriptors, and that filtering is load-bearing, not cosmetic.
 
 ### Where the code lives
@@ -190,8 +192,9 @@ runtime behaviour that compiles perfectly well when broken.
 |---|---|
 | `NativeChessLibraryTest` | The four traps above; plays real moves through the C rules engine |
 | `CarballoEngineTest` | The engine runs under ART, loads its opening book from a classpath resource, declares its parameters, and rejects undeclared ones |
-| `EngineGameFlowTest` | A full engine game through the **real orchestrator** — mode selection, config handshake, move inference, engine reply. Only the BLE board is faked |
+| `EngineGameFlowTest` | A full engine game through the **real orchestrator** — mode selection, config handshake, move inference, engine reply. Also that with two engines the app asks which to play and routes to the chosen one. Only the BLE board is faked |
 | `LichessHttpApiTest` | The OkHttp rewrite under ART against a mock server: bearer token, error status codes, NDJSON line splitting, and that an abandoned stream is cut short rather than drained |
+| `RemoteStockfishEngineTest` | The second engine under ART against a mock server: declared parameters, range validation, settings reaching the wire, and a failed request surfacing as a failure rather than a stall |
 | `GameHistoryTest` | Room schema on a real database, PGN export shape, 80-column wrapping, and a game being recorded as soon as it is reported finished |
 
 ---
@@ -329,9 +332,6 @@ once in game setup (it is masked and persisted), and seek a casual game. Things 
 
 ### Optional next features
 
-- **A second engine.** Wire `scp:engine-remote-stockfish` the way `phase-c-engine` wired Carballo.
-  It should need no UI work at all, since the forms are generated — worth doing precisely because it
-  tests that claim.
 - **Share/export PGN** via an Android share intent. `toPgn()` already produces importable output;
   only the intent is missing.
 - **Engine search time.** The orchestrator asks for a move with no time or depth limit, so every

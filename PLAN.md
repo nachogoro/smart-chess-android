@@ -69,9 +69,8 @@ hardware and services, plus optional extras:
    single largest untested surface and it gates every mode.
 2. **Play a real game on Lichess**, with an API token carrying the `board:play`
    scope.
-3. Optional: wire `scp:engine-remote-stockfish` as a second engine. The setup UI
-   is generic, so it should need no UI work — which is worth confirming, since
-   it is the claim the engine form is built on.
+3. ~~Wire `scp:engine-remote-stockfish` as a second engine.~~ **Done** — tag
+   `second-engine`. It needed no UI work, confirming the generic-form claim.
 
 ## Decisions already taken (carry forward)
 

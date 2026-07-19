@@ -64,17 +64,25 @@ cannot catch a `Cleaner` regression.
 
 ## Engine play
 
-Carballo (`scp:engine-carballo`) runs the engine on the phone itself, so engine play needs no
-network and no API key. Its options are not hardcoded in the UI: the adapter declares them as
-`ParameterDescriptor`s and `ParameterForm` renders them generically — including `visible_when`
-conditional fields, such as the target Elo that appears only once strength limiting is on. An
-engine added later therefore needs no UI changes.
+Two engines are registered. **Carballo** (`scp:engine-carballo`) runs on the phone itself, so it
+needs no network and no API key — it is listed first for that reason. **Remote Stockfish**
+(`scp:engine-remote-stockfish`) plays over chess-api.com: stronger, but only while there is a
+connection. With more than one engine registered the app asks which to play; with one, the
+orchestrator picks it without asking.
 
-Two instrumented tests cover it, and both matter because neither failure mode shows up at compile
-time: `CarballoEngineTest` checks the engine itself runs on a device (it loads its opening book
-from a classpath resource, which desktop-oriented libraries often get wrong on Android), and
-`EngineGameFlowTest` plays a real game through the actual orchestrator with a fake board standing
-in for BLE.
+Neither engine's options are hardcoded in the UI. Each adapter declares them as
+`ParameterDescriptor`s and `ParameterForm` renders them generically, including `visible_when`
+conditional fields such as Carballo's target Elo, which appears only once strength limiting is on.
+Adding the second engine bore that out: it touched the two Gradle files and one line of
+`ChessViewModel`, and no UI file at all.
+
+Three instrumented tests cover engine play, and each matters because none of these failures show up
+at compile time. `CarballoEngineTest` checks the on-device engine runs under ART and loads its
+opening book from a classpath resource, which desktop-oriented libraries often get wrong on Android.
+`RemoteStockfishEngineTest` does the same for the networked engine against a mock server, so it
+needs no real service. `EngineGameFlowTest` plays a real game through the actual orchestrator with a
+fake board standing in for BLE, and checks that with two engines registered the app asks which to
+play and routes to the one chosen.
 
 ## Online play
 
@@ -138,6 +146,6 @@ The connection screen checks each requirement separately and prompts for whichev
 ## Status
 
 - [x] Local player vs local player
-- [x] Play against an engine (Carballo, on-device)
+- [x] Play against an engine (Carballo on-device, or remote Stockfish)
 - [x] Play remotely (Lichess) — not yet exercised against the live service
 - [x] Games history with PGN and move-by-move replay

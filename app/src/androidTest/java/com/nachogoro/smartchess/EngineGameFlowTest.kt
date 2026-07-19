@@ -26,9 +26,15 @@ import scp.protocol.BoardCapabilityLevel
 import scp.protocol.BoardError
 import scp.protocol.BoardErrorEvent
 import scp.protocol.BoardModule
+import scp.protocol.BestMoveResult
 import scp.protocol.BoardState
 import scp.protocol.Color
+import scp.protocol.EngineAdapterModule
+import scp.protocol.EngineCapabilities
+import scp.protocol.EngineError
+import scp.protocol.EngineErrorEvent
 import scp.protocol.EngineGameConfig
+import scp.protocol.GetBestMoveParams
 import scp.protocol.GameMode
 import scp.protocol.Piece
 import scp.protocol.PieceType
@@ -113,6 +119,87 @@ class EngineGameFlowTest {
             orchestrator.stop()
             scope.cancel()
         }
+    }
+
+    @Test
+    fun asksWhichEngineToPlayWhenMoreThanOneIsRegistered() = runBlocking {
+        // With a single engine the orchestrator picks it silently, so this prompt - and the picker
+        // that answers it - only became reachable when a second engine was added.
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val ui = AndroidUIModule()
+        val board = FakeBoard(STARTING_FEN)
+        // A legal black reply to 1.e4 - the stub plays second, so a white move would be
+        // rejected by the rules engine and never reach the UI.
+        val stub = StubEngine(name = "Stub Engine", move = "d7d5")
+        val orchestrator = Orchestrator(
+            board = board,
+            gameController = GameController(scope),
+            ui = ui,
+            engines = listOf(CarballoAdapter(), stub),
+        )
+
+        try {
+            scope.launch { orchestrator.start() }
+            ui.requestNewGame()
+
+            awaitUntil("game mode prompt") { ui.pendingGameModeSelection != null }
+            ui.pendingGameModeSelection!!.complete(GameMode.ENGINE)
+
+            awaitUntil("engine selection prompt") { ui.pendingEngineSelection != null }
+            val choices = ui.pendingEngineSelection!!.input
+            assertEquals(2, choices.size)
+            assertTrue("Engines not named: $choices", choices.all { it.name.isNotBlank() })
+
+            // Pick the second one. The orchestrator resolves the answer back to an adapter by
+            // name, so choosing anything other than the first is what proves the mapping works.
+            ui.pendingEngineSelection!!.complete("Stub Engine")
+
+            awaitUntil("engine configuration prompt") { ui.pendingEngineGameConfig != null }
+            assertEquals("Stub Engine", ui.pendingEngineGameConfig!!.input.engineName)
+            ui.pendingEngineGameConfig!!.complete(
+                EngineGameConfig(Color.WHITE, emptyMap(), timeControl = null)
+            )
+
+            awaitUntil("game to start") { ui.lastGameStartedInfo != null }
+            val gameId = ui.lastGameStartedInfo!!.gameId
+
+            board.setPosition(AFTER_E4_FEN)
+            ui.signalMoveReady(gameId)
+
+            awaitUntil("engine to reply") { ui.lastOpponentMove != null }
+            // The chosen engine played, not the other one. Carballo would essentially never
+            // pick this reply, so the move identifies which adapter answered.
+            assertEquals("d7d5", ui.lastOpponentMove!!.move)
+        } finally {
+            orchestrator.stop()
+            scope.cancel()
+        }
+    }
+
+    /**
+     * An engine that always plays the same move, so it is distinguishable from any real one.
+     *
+     * The point is to tell which adapter the orchestrator actually routed to; a real second engine
+     * would answer plausibly either way and prove nothing.
+     */
+    private class StubEngine(
+        private val name: String,
+        private val move: String,
+    ) : EngineAdapterModule {
+        override val errors: SharedFlow<EngineErrorEvent> = MutableSharedFlow()
+
+        override suspend fun getCapabilities(): Result<EngineError, EngineCapabilities> =
+            Result.Success(EngineCapabilities(name = name, author = "test", parameters = emptyList()))
+
+        override suspend fun configure(settings: Map<String, Any>): Result<EngineError, Unit> =
+            Result.Success(Unit)
+
+        override suspend fun getBestMove(params: GetBestMoveParams): Result<EngineError, BestMoveResult> =
+            Result.Success(BestMoveResult(move = move))
+
+        override suspend fun stop(): Result<EngineError, Unit> = Result.Success(Unit)
+
+        override suspend fun newGame(): Result<EngineError, Unit> = Result.Success(Unit)
     }
 
     /**
