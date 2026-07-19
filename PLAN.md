@@ -6,7 +6,7 @@
 |---|---|---|
 | A | Refactor scp remote adapters off `java.net.http` onto OkHttp | **Done** |
 | B | Scaffold app + Local PvP (BLE board, Compose UI, settings) | **Done** — tag `phase-b-local-pvp` |
-| C | PvE via on-device Carballo engine | Not started |
+| C | PvE via on-device Carballo engine | **Done** — tag `phase-c-engine` |
 | D | Remote PvP via Lichess | Not started |
 | E | Games history (Room + PGN + move visor) | Placeholder screen only |
 
@@ -17,6 +17,7 @@ manifest entry and resources a feature needs land in the same commit as its
 code. Milestones are tagged, so a phase is a commit range.
 
 - **Phase B — local PvP**: `root..phase-b-local-pvp` (9 commits)
+- **Phase C — engine play**: `phase-b-local-pvp..phase-c-engine` (2 commits)
 
 Verify any commit with `./gradlew :app:assembleDebug`; the native library check
 is `./gradlew :app:connectedDebugAndroidTest` and needs a running device.
@@ -43,19 +44,20 @@ without publishing. Once the `NativeCleaner` fix reaches Maven Central, the
   catch a `Cleaner` regression. The `Pixel_XL_API_30` AVD is the right target;
   boot it with `emulator -avd Pixel_XL_API_30 -no-window -no-audio`.
 - BLE cannot be exercised on an emulator. Anything touching the board needs the
-  real hardware.
+  real hardware. `EngineGameFlowTest` works around this with a fake board so the
+  rest of the stack can still be tested end to end on device; the same trick is
+  available for phases D and E.
+- The orchestrator asks engines for a move with no time or depth limit, so every
+  engine move is a fixed depth-10 search (~1.5s for Carballo on the API 30
+  emulator). If a slower engine or device makes that unpleasant, the call site
+  to change is `MoveHandling.kt` in the protocol repo - the UI has no hook.
 
 ## Ordered next steps
 
-1. **Phase C** — add `scp:engine-carballo` to `app/build.gradle.kts` and to the
-   substitutions in `settings.gradle.kts`, extend `GameSetupScreen` with engine
-   selection driven by `ParameterDescriptor` (`ParameterForm.kt` already renders
-   these generically, so no bespoke UI), play a full engine game. Tag
-   `phase-c-engine`.
-2. **Phase D** — wire `scp:remote-lichess`, platform/seek forms, seeking UI, and
+1. **Phase D** — wire `scp:remote-lichess`, platform/seek forms, seeking UI, and
    make the clocks follow the remote authority rather than the local tick.
    Needs a Lichess token in Settings. Tag `phase-d-remote`.
-3. **Phase E** — Room-backed history replacing the placeholder `HistoryScreen`:
+2. **Phase E** — Room-backed history replacing the placeholder `HistoryScreen`:
    PGN, move-by-move visor, player identities. Then wire the remote-Stockfish
    engine adapter. Tag `phase-e-history`.
 
