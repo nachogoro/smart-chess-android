@@ -101,6 +101,21 @@ Two things behave differently from a local game:
 Cleartext HTTP is blocked, as it should be for something carrying an API token. Debug builds carry
 a loopback-only exemption so the instrumented tests can use a mock server; release builds do not.
 
+## Games history
+
+Finished games are stored in Room. They are recorded the moment the orchestrator reports a game
+over, not when the user dismisses the result dialog, so a game survives the app being killed at the
+board. That persistence is driven by an explicit `gameEnded` flow on `AndroidUIModule` rather than
+by observing its Compose state: outside a composition, snapshot observation only fires if something
+pumps snapshot notifications, and losing games to that subtlety is not a risk worth taking.
+
+Each stored move keeps the position that followed it, which the protocol already provides. Replay
+is therefore just indexing into that list — no rules engine is involved in stepping through a game,
+and the board view from local play is reused to draw it.
+
+`toPgn` renders the export format: the seven mandatory tags in order, a blank line, then movetext
+wrapped at 80 columns and terminated by the result, so other chess software can import it.
+
 ## Building
 
 ```sh
@@ -125,4 +140,4 @@ The connection screen checks each requirement separately and prompts for whichev
 - [x] Local player vs local player
 - [x] Play against an engine (Carballo, on-device)
 - [x] Play remotely (Lichess) — not yet exercised against the live service
-- [ ] Games history with PGN and move-by-move replay
+- [x] Games history with PGN and move-by-move replay

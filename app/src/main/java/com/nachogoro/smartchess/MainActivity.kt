@@ -45,6 +45,7 @@ private fun SmartChessApp(viewModel: ChessViewModel = viewModel()) {
     val session by viewModel.session.collectAsState()
     val orchestratorState by viewModel.orchestratorState.collectAsState()
     val setupMode by viewModel.setupMode.collectAsState()
+    val playedGames by viewModel.playedGames.collectAsState()
 
     when (screen) {
         Screen.CONNECTION -> ConnectionScreen(
@@ -106,7 +107,11 @@ private fun SmartChessApp(viewModel: ChessViewModel = viewModel()) {
 
         Screen.HISTORY -> {
             BackHandler { viewModel.backToMenu() }
-            HistoryScreen(onBack = viewModel::backToMenu)
+            HistoryScreen(
+                games = playedGames,
+                onDelete = viewModel::deleteGame,
+                onBack = viewModel::backToMenu,
+            )
         }
     }
 

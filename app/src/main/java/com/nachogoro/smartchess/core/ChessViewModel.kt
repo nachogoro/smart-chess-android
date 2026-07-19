@@ -7,6 +7,8 @@ import com.nachogoro.smartchess.ble.BleBoardConnection
 import com.nachogoro.smartchess.ble.BleBoardModule
 import com.nachogoro.smartchess.ble.BoardConnectionState
 import com.nachogoro.smartchess.data.AppSettings
+import com.nachogoro.smartchess.data.GameHistoryRepository
+import com.nachogoro.smartchess.data.GameRecord
 import com.nachogoro.smartchess.data.SettingsRepository
 import com.nachogoro.smartchess.ui.AndroidUIModule
 import kotlinx.coroutines.CoroutineScope
@@ -81,6 +83,10 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
         remotes = remotes,
     )
 
+    private val historyRepository = GameHistoryRepository(application)
+    val playedGames: StateFlow<List<GameRecord>> = historyRepository.games
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     private val settingsRepository = SettingsRepository(application)
     val settings: StateFlow<AppSettings> = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())
@@ -112,6 +118,13 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch(Dispatchers.Default) { orchestrator.start() }
+
+        // Record a game the moment the orchestrator reports it finished, rather than when the user
+        // dismisses the result dialog - otherwise a game is lost if the app dies at the board.
+        // Re-recording the same game is harmless: records are keyed by game id and replaced.
+        viewModelScope.launch {
+            uiModule.gameEnded.collect { historyRepository.record(it) }
+        }
 
         viewModelScope.launch {
             while (isActive) {
@@ -148,6 +161,10 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
 
     fun openSettings() { _screen.value = Screen.SETTINGS }
     fun openHistory() { _screen.value = Screen.HISTORY }
+
+    fun deleteGame(gameId: String) {
+        viewModelScope.launch { historyRepository.delete(gameId) }
+    }
     fun backToMenu() { _screen.value = Screen.MAIN_MENU }
 
     fun startGame(mode: GameMode) {

@@ -80,6 +80,17 @@ class AndroidUIModule : UIModule {
 
     // -- Events emitted by the UI --
 
+    /**
+     * Games that have finished, for consumers that must not miss one.
+     *
+     * [lastGameSummary] is Compose state and drives the result dialog, but observing it outside a
+     * composition would depend on the recomposer pumping snapshot notifications. Persistence must
+     * not rest on that, so finished games are also published here. Replay covers a collector that
+     * subscribes fractionally after a game ends.
+     */
+    private val _gameEnded = MutableSharedFlow<GameSummary>(replay = 1)
+    val gameEnded: SharedFlow<GameSummary> = _gameEnded
+
     private val _newGameRequested = MutableSharedFlow<Unit>(replay = 1)
     private val _moveReady = MutableSharedFlow<MoveReadyEvent>(extraBufferCapacity = 4)
     private val _resignRequested = MutableSharedFlow<ResignRequestedEvent>(extraBufferCapacity = 4)
@@ -139,6 +150,7 @@ class AndroidUIModule : UIModule {
     override suspend fun onGameEnded(summary: GameSummary) {
         currentFen = summary.finalFen
         lastGameSummary = summary
+        _gameEnded.emit(summary)
     }
 
     override suspend fun showOpponentMove(params: ShowOpponentMoveParams): Result<UIError, Unit> {

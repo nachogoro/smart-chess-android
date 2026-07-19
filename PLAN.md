@@ -8,7 +8,7 @@
 | B | Scaffold app + Local PvP (BLE board, Compose UI, settings) | **Done** — tag `phase-b-local-pvp` |
 | C | PvE via on-device Carballo engine | **Done** — tag `phase-c-engine` |
 | D | Remote PvP via Lichess | **Done** — tag `phase-d-remote` (untested against live Lichess) |
-| E | Games history (Room + PGN + move visor) | Placeholder screen only |
+| E | Games history (Room + PGN + move visor) | **Done** — tag `phase-e-history` |
 
 ## Reviewing the history
 
@@ -19,6 +19,7 @@ code. Milestones are tagged, so a phase is a commit range.
 - **Phase B — local PvP**: `root..phase-b-local-pvp` (9 commits)
 - **Phase C — engine play**: `phase-b-local-pvp..phase-c-engine` (2 commits)
 - **Phase D — remote play**: `phase-c-engine..phase-d-remote` (2 commits)
+- **Phase E — games history**: `phase-d-remote..phase-e-history` (1 commit)
 
 Verify any commit with `./gradlew :app:assembleDebug`; the native library check
 is `./gradlew :app:connectedDebugAndroidTest` and needs a running device.
@@ -60,9 +61,17 @@ without publishing. Once the `NativeCleaner` fix reaches Maven Central, the
 
 ## Ordered next steps
 
-1. **Phase E** — Room-backed history replacing the placeholder `HistoryScreen`:
-   PGN, move-by-move visor, player identities. Then wire the remote-Stockfish
-   engine adapter. Tag `phase-e-history`.
+All five planned phases are done. What remains is verification against real
+hardware and services, plus optional extras:
+
+1. **Play a real game on the physical board.** Nothing in the app has ever
+   talked to the actual BLE board — no emulator provides Bluetooth. This is the
+   single largest untested surface and it gates every mode.
+2. **Play a real game on Lichess**, with an API token carrying the `board:play`
+   scope.
+3. Optional: wire `scp:engine-remote-stockfish` as a second engine. The setup UI
+   is generic, so it should need no UI work — which is worth confirming, since
+   it is the claim the engine form is built on.
 
 ## Decisions already taken (carry forward)
 
