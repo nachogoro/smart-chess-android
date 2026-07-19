@@ -29,6 +29,15 @@ include(":app")
 //
 // Only the modules the app actually depends on are substituted; the engine and remote adapters
 // are added here as the phases that need them land.
+// The Kotlin wrapper around the native rules engine is likewise consumed from source rather than
+// from Maven Central. The published 1.0.0 frees native pointers through java.lang.ref.Cleaner,
+// which is API 33+ and so unusable here; building it from source picks up the replacement.
+includeBuild("../simple-chess-kotlin") {
+    dependencySubstitution {
+        substitute(module("io.github.nachogoro:simplechess")).using(project(":"))
+    }
+}
+
 includeBuild("../simple-chess-protocol/scp") {
     dependencySubstitution {
         substitute(module("scp:protocol")).using(project(":protocol"))

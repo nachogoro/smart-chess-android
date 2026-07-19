@@ -40,8 +40,9 @@ behind an optional toggle purely so a player can confirm the two are in sync.
 
 ## Native chess library
 
-The rules engine is a C library reached through JNA (`io.github.nachogoro:simplechess`). Getting it
-onto Android needs three things that are easy to get wrong:
+The rules engine is a C library reached through JNA (`io.github.nachogoro:simplechess`, built from
+the sibling `simple-chess-kotlin` checkout — see below). Getting it onto Android needs four things
+that are easy to get wrong:
 
 1. **`jniLibs/<abi>/libsimple-chess-games-c.so`** — the binaries are committed under
    `app/src/main/jniLibs/`. Android's linker will only `dlopen` from the app's `nativeLibraryDir`,
@@ -51,9 +52,15 @@ onto Android needs three things that are easy to get wrong:
 3. **Stripping `native/**` from packaged resources** — the library otherwise tries to extract its
    bundled `.so` to a temp directory and load from there, which Android forbids. Removing those
    resources makes it fall through to the system path, which works.
+4. **No `java.lang.ref.Cleaner`** — the published `simplechess` 1.0.0 frees native pointers through
+   `Cleaner`, which is API 33+, so it throws `NoClassDefFoundError` on anything older. The wrapper
+   uses a `PhantomReference`-based replacement instead, and is consumed from the sibling
+   `simple-chess-kotlin` checkout via composite build until that reaches Maven Central. Core
+   library desugaring does *not* fix this: `desugar_jdk_libs` covers no `java.lang.ref` classes.
 
 `NativeChessLibraryTest` (instrumented) plays real moves through the engine and is the check that
-all three are still correct. It must run on a device or emulator.
+all four are still correct. It must run on a device or emulator — and on one below API 33, or it
+cannot catch a `Cleaner` regression.
 
 ## Building
 
