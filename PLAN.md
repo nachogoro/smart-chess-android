@@ -16,9 +16,9 @@ Every commit builds on its own, and each is self-contained: the dependency,
 manifest entry and resources a feature needs land in the same commit as its
 code. Milestones are tagged, so a phase is a commit range.
 
-- **Phase B — local PvP**: `root..phase-b-local-pvp` (9 commits)
-- **Phase C — engine play**: `phase-b-local-pvp..phase-c-engine` (2 commits)
-- **Phase D — remote play**: `phase-c-engine..phase-d-remote` (2 commits)
+- **Phase B — local PvP**: `phase-b-local-pvp` (9 commits)
+- **Phase C — engine play**: `phase-b-local-pvp..phase-c-engine` (3, one a plan update)
+- **Phase D — remote play**: `phase-c-engine..phase-d-remote` (3, one a plan update)
 - **Phase E — games history**: `phase-d-remote..phase-e-history` (1 commit)
 
 Verify any commit with `./gradlew :app:assembleDebug`; the native library check
