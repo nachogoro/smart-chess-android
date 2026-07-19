@@ -89,6 +89,12 @@ dependencies {
         exclude(group = "net.java.dev.jna", module = "jna")
     }
 
+    // Online play. Reaches Lichess over OkHttp: the JDK HTTP client the adapter originally used
+    // is unavailable on Android below API 34.
+    implementation("scp:remote-lichess:0.1.0") {
+        exclude(group = "net.java.dev.jna", module = "jna")
+    }
+
     // JNA, Android variant: unlike the desktop jar, this AAR ships libjnidispatch.so per ABI.
     implementation("net.java.dev.jna:jna:5.13.0@aar")
 
@@ -114,4 +120,6 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    // Lets the Lichess HTTP layer be exercised under ART without a Lichess account.
+    androidTestImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }
