@@ -103,7 +103,7 @@ ble/            BleBoardConnection   scan, connect, GATT, reconnection      (350
                 BoardPackets         wire format decoding, service UUIDs    (195)
                 BleBoardModule       adapts the above to SCP's BoardModule  (100)
                 BlePermissions       the version-dependent permission set    (48)
-core/           ChessViewModel       owns the SCP stack for the app's life  (266)
+core/           ChessViewModel       owns the SCP stack for the app's life  (269)
 data/           SettingsRepository   nickname + per-module settings          (84)
                 GameHistory          Room entity, DAO, database             (118)
                 GameHistoryRepository                                        (41)
@@ -120,7 +120,7 @@ ui/screens/     ConnectionScreen     BLE permissions and connection         (193
 MainActivity                         screen graph                          (122)
 ```
 
-About 3,000 lines of app code and 690 of instrumented tests.
+About 3,900 lines of app code and 900 of instrumented tests.
 
 ### Clocks
 
@@ -141,8 +141,8 @@ down locally from that snapshot; the countdown is cosmetic and each update corre
 
 ## 3. What has been built
 
-Five phases, each a tagged commit range. All 16 commits build standalone; all 16 instrumented tests
-pass on the API 30 emulator.
+Five phases plus a follow-up, each a tagged commit range. All 18 commits build standalone; all 22
+instrumented tests pass on the API 30 emulator.
 
 | Phase | Scope | Tag |
 |---|---|---|
@@ -151,6 +151,16 @@ pass on the API 30 emulator.
 | C | Play an on-device engine (Carballo) | `phase-c-engine` |
 | D | Play a remote opponent (Lichess) | `phase-d-remote` |
 | E | Games history: Room, PGN, move-by-move replay | `phase-e-history` |
+| — | Remote Stockfish added as a second engine | `second-engine` |
+
+The follow-up after phase E was deliberately a test of the architecture rather than a feature.
+Adding a second engine was supposed to need no UI work, since the setup forms are generated from
+whatever parameters an adapter declares — and it did not: two Gradle files and one line of
+`ChessViewModel`. It also made the **engine picker reachable for the first time**. With a single
+engine the orchestrator selects it silently, so that branch had never executed in any build; it now
+has a test, using a stub engine that always plays the same move, because the orchestrator resolves
+the user's answer back to an adapter *by name* and only picking something other than the first entry
+proves that mapping works.
 
 ### Changes in sibling repos
 
@@ -221,6 +231,13 @@ Remote play needs an API token with the `board:play` scope. The HTTP layer is te
 against a mock server, and the adapter's state machine is tested on the JVM in the protocol repo,
 but the two have never been put together against the real service.
 
+### chess-api.com has never been contacted
+
+The remote Stockfish engine is tested under ART against a mock server — its API URL is a constructor
+parameter — but no request has ever gone to the real service. Carballo needs no network and is
+verified, so engine play as a whole does work; it is the networked engine specifically that is
+untried.
+
 ### Everything else is verified
 
 Local play logic, engine play, history, PGN and the native library all run green on the API 30
@@ -238,13 +255,14 @@ reasoning lives, so reading `git log` is not optional colour.
 ### Reviewing by feature
 
 ```sh
-git log --oneline --decorate --reverse          # the whole story, 16 commits
+git log --oneline --decorate --reverse          # the whole story, 18 commits
 git show <sha>                                  # one self-contained change
 
 git log --oneline phase-b-local-pvp                    # local play  (9 commits)
 git log --oneline phase-b-local-pvp..phase-c-engine    # engine      (3, one of them a plan update)
 git log --oneline phase-c-engine..phase-d-remote       # remote      (3, one of them a plan update)
 git log --oneline phase-d-remote..phase-e-history      # history     (1)
+git log --oneline phase-e-history..second-engine       # 2nd engine  (2, one of them this document)
 
 git tag -n99                                    # what each milestone claims, and what it does not
 ```
@@ -254,7 +272,7 @@ this document ever disagree, trust the tag — it was written with the evidence 
 
 ### Suggested reading order
 
-If you read nothing else, read these four, in this order:
+If you read nothing else, read these five, in this order:
 
 1. `9e9390d` **Run the native chess rules engine on Android** — the four traps, and the reasoning.
 2. `7dcf9ba` **Wire up local player vs local player** — how the parts join up.
@@ -262,6 +280,8 @@ If you read nothing else, read these four, in this order:
    dead end.
 4. `7181a29` **Keep a history of played games** — includes why persistence does *not* observe
    Compose state.
+5. `27176d3` **Add remote Stockfish as a second engine** — the shortest illustration of what the
+   generic parameter forms buy, and of a branch that had never run until a second engine existed.
 
 Then, for the code itself: `ui/AndroidUIModule.kt` (the orchestrator-asks-the-questions bridge),
 then `core/ChessViewModel.kt` (what owns what), then whichever screen interests you.
@@ -275,7 +295,7 @@ Every commit builds — verify it yourself rather than taking my word:
 $ANDROID_HOME/emulator/emulator -avd Pixel_XL_API_30 -no-window -no-audio &
 
 ./gradlew :app:assembleDebug                    # HEAD builds
-./gradlew :app:connectedDebugAndroidTest        # 16 instrumented tests
+./gradlew :app:connectedDebugAndroidTest        # 22 instrumented tests
 
 # Every commit builds from a clean checkout — the loop I used, worth re-running after any rebase.
 # The worktree must be a sibling of the other repos: the composite build uses relative paths.
@@ -334,10 +354,11 @@ once in game setup (it is masked and persisted), and seek a casual game. Things 
 
 - **Share/export PGN** via an Android share intent. `toPgn()` already produces importable output;
   only the intent is missing.
-- **Engine search time.** The orchestrator asks for a move with no time or depth limit, so every
-  engine move is a fixed depth-10 search (~1.5s for Carballo on the emulator). If that is unpleasant
-  on a slower device or engine, the call site is `MoveHandling.kt` in the protocol repo — the UI has
-  no hook for it.
+- **Engine search time.** The orchestrator asks for a move with no time or depth limit, so each
+  engine falls back to its own setting. For Carballo that is a hardcoded depth-10 search (~1.5s on
+  the emulator) that the user cannot change; remote Stockfish exposes `Depth` as a parameter, so
+  there it is adjustable in the setup form. If Carballo's fixed depth proves unpleasant on a slow
+  device, the call site to change is `MoveHandling.kt` in the protocol repo — the UI has no hook.
 - **Drop the `simple-chess-kotlin` composite build** once `NativeCleaner` ships to Maven Central.
 
 ### Conventions to keep
