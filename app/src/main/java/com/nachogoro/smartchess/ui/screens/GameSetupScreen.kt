@@ -33,6 +33,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.nachogoro.smartchess.data.AppSettings
 import com.nachogoro.smartchess.ui.AndroidUIModule
+import com.nachogoro.smartchess.ui.components.ParameterFormFields
+import com.nachogoro.smartchess.ui.components.rememberParameterFormState
+import scp.protocol.Color
+import scp.protocol.ConfigureEngineGameParams
+import scp.protocol.EngineGameConfig
+import scp.protocol.EngineInfo
 import scp.protocol.GameMode
 import scp.protocol.LocalGameConfig
 import scp.protocol.TimeControl
@@ -52,12 +58,17 @@ fun GameSetupScreen(
     settings: AppSettings,
     onBack: () -> Unit,
     onGameStarted: () -> Unit,
+    onSaveModuleSettings: (String, Map<String, String>) -> Unit,
 ) {
     // The mode was already chosen in the main menu, so answer that question automatically.
     val pendingMode = uiModule.pendingGameModeSelection
     LaunchedEffect(pendingMode) {
         pendingMode?.complete(mode)
     }
+
+    // Note the orchestrator only asks this when more than one engine is registered; with a single
+    // engine it picks that one itself and never prompts. So this branch is genuinely multi-engine.
+    val pendingEngine = uiModule.pendingEngineSelection
 
     // Game start arrives as a notification rather than as a return value.
     val started = uiModule.lastGameStartedInfo
@@ -66,6 +77,7 @@ fun GameSetupScreen(
     }
 
     val pendingLocal = uiModule.pendingLocalGameConfig
+    val pendingEngineConfig = uiModule.pendingEngineGameConfig
 
     Column(
         modifier = Modifier
@@ -80,6 +92,30 @@ fun GameSetupScreen(
                 onSubmit = { pendingLocal.complete(it) },
                 onCancel = {
                     pendingLocal.cancel()
+                    onBack()
+                },
+            )
+
+            pendingEngineConfig != null -> EngineGameForm(
+                params = pendingEngineConfig.input,
+                savedValues = settings.settingsFor(pendingEngineConfig.input.engineName),
+                onSubmit = { config, rawValues ->
+                    // Persist before completing: completing unparks the orchestrator, which
+                    // clears the pending request and recomposes this branch away.
+                    onSaveModuleSettings(pendingEngineConfig.input.engineName, rawValues)
+                    pendingEngineConfig.complete(config)
+                },
+                onCancel = {
+                    pendingEngineConfig.cancel()
+                    onBack()
+                },
+            )
+
+            pendingEngine != null -> EnginePicker(
+                engines = pendingEngine.input,
+                onSelect = { pendingEngine.complete(it.name) },
+                onCancel = {
+                    pendingEngine.cancel()
                     onBack()
                 },
             )
@@ -168,6 +204,136 @@ private fun LocalGameForm(
             onClick = onCancel,
             modifier = Modifier.weight(1f).height(50.dp),
         ) { Text("Back") }
+    }
+}
+
+@Composable
+private fun EnginePicker(
+    engines: List<EngineInfo>,
+    onSelect: (EngineInfo) -> Unit,
+    onCancel: () -> Unit,
+) {
+    Text("Choose an engine", style = MaterialTheme.typography.headlineMedium)
+    Spacer(Modifier.height(20.dp))
+
+    for (engine in engines) {
+        OutlinedButton(
+            onClick = { onSelect(engine) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.padding(vertical = 8.dp)) {
+                Text(engine.name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    engine.author,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+    }
+
+    Spacer(Modifier.height(16.dp))
+    OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text("Back") }
+}
+
+/**
+ * Setup for a game against an engine.
+ *
+ * The engine's own options are not hardcoded here: the adapter declares them as
+ * [scp.protocol.ParameterDescriptor]s and [ParameterFormFields] renders them, so an engine added
+ * later needs no changes to this screen. Previously entered values are pre-filled from settings.
+ */
+@Composable
+private fun EngineGameForm(
+    params: ConfigureEngineGameParams,
+    savedValues: Map<String, String>,
+    onSubmit: (EngineGameConfig, Map<String, String>) -> Unit,
+    onCancel: () -> Unit,
+) {
+    var playerColor by remember { mutableStateOf(Color.WHITE) }
+    val timeControl = rememberTimeControlState()
+    val parameterForm = rememberParameterFormState(params.parameters, savedValues)
+    var validationError by remember { mutableStateOf<String?>(null) }
+
+    Text("Play ${params.engineName}", style = MaterialTheme.typography.headlineMedium)
+    Spacer(Modifier.height(8.dp))
+    Text(
+        "The engine runs on this phone. Move its pieces on the board when it replies.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(20.dp))
+
+    // The orchestrator re-prompts with an error when the adapter rejects a configuration, so both
+    // that and local validation surface in the same place.
+    SetupErrorBanner(params.errorMessage ?: validationError)
+
+    Text("Play as", style = MaterialTheme.typography.titleMedium)
+    Spacer(Modifier.height(8.dp))
+    Row(Modifier.fillMaxWidth()) {
+        ColorChoice(
+            label = "White",
+            selected = playerColor == Color.WHITE,
+            onClick = { playerColor = Color.WHITE },
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.width(12.dp))
+        ColorChoice(
+            label = "Black",
+            selected = playerColor == Color.BLACK,
+            onClick = { playerColor = Color.BLACK },
+            modifier = Modifier.weight(1f),
+        )
+    }
+
+    if (params.parameters.isNotEmpty()) {
+        Spacer(Modifier.height(24.dp))
+        Text("Engine options", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(12.dp))
+        ParameterFormFields(parameterForm)
+    }
+
+    Spacer(Modifier.height(8.dp))
+    TimeControlSection(timeControl)
+    Spacer(Modifier.height(28.dp))
+
+    Row(Modifier.fillMaxWidth()) {
+        Button(
+            onClick = {
+                val error = parameterForm.validationError()
+                validationError = error
+                if (error != null) return@Button
+                onSubmit(
+                    EngineGameConfig(
+                        playerColor = playerColor,
+                        engineSettings = parameterForm.toTypedValues(),
+                        timeControl = timeControl.toTimeControl(),
+                    ),
+                    parameterForm.toStringValues(),
+                )
+            },
+            modifier = Modifier.weight(1f).height(50.dp),
+        ) { Text("Start game") }
+        Spacer(Modifier.width(12.dp))
+        OutlinedButton(
+            onClick = onCancel,
+            modifier = Modifier.weight(1f).height(50.dp),
+        ) { Text("Back") }
+    }
+}
+
+@Composable
+private fun ColorChoice(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (selected) {
+        Button(onClick = onClick, modifier = modifier.height(48.dp)) { Text(label) }
+    } else {
+        OutlinedButton(onClick = onClick, modifier = modifier.height(48.dp)) { Text(label) }
     }
 }
 

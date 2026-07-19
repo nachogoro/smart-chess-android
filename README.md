@@ -62,6 +62,20 @@ that are easy to get wrong:
 all four are still correct. It must run on a device or emulator — and on one below API 33, or it
 cannot catch a `Cleaner` regression.
 
+## Engine play
+
+Carballo (`scp:engine-carballo`) runs the engine on the phone itself, so engine play needs no
+network and no API key. Its options are not hardcoded in the UI: the adapter declares them as
+`ParameterDescriptor`s and `ParameterForm` renders them generically — including `visible_when`
+conditional fields, such as the target Elo that appears only once strength limiting is on. An
+engine added later therefore needs no UI changes.
+
+Two instrumented tests cover it, and both matter because neither failure mode shows up at compile
+time: `CarballoEngineTest` checks the engine itself runs on a device (it loads its opening book
+from a classpath resource, which desktop-oriented libraries often get wrong on Android), and
+`EngineGameFlowTest` plays a real game through the actual orchestrator with a fake board standing
+in for BLE.
+
 ## Building
 
 ```sh
@@ -84,6 +98,6 @@ The connection screen checks each requirement separately and prompts for whichev
 ## Status
 
 - [x] Local player vs local player
-- [ ] Play against an engine
+- [x] Play against an engine (Carballo, on-device)
 - [ ] Play remotely
 - [ ] Games history with PGN and move-by-move replay

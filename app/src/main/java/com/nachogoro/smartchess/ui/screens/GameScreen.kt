@@ -159,8 +159,14 @@ private fun CenterPanel(
             is OrchestratorState.AwaitingPlayerMove ->
                 "${orchestratorState.color.displayName()} to move"
 
+            // An engine is computing rather than merely absent, so say so - "waiting for Black"
+            // reads like a stall when the phone is in fact busy searching.
             is OrchestratorState.AwaitingOpponentMove ->
-                "Waiting for ${orchestratorState.color.displayName()}..."
+                if (session?.mode == GameMode.ENGINE) {
+                    "Engine is thinking..."
+                } else {
+                    "Waiting for ${orchestratorState.color.displayName()}..."
+                }
         }
 
         Text(

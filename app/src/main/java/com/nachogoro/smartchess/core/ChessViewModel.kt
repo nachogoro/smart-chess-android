@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import scp.engine.carballo.CarballoAdapter
 import scp.game.GameController
 import scp.orchestrator.GameSession
 import scp.orchestrator.Orchestrator
@@ -68,7 +69,7 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
      * The main menu is derived from these, so a build without an engine adapter simply does not
      * offer engine play.
      */
-    private val engines: List<EngineAdapterModule> = emptyList()
+    private val engines: List<EngineAdapterModule> = listOf(CarballoAdapter())
     private val remotes: List<RemoteAdapterModule> = emptyList()
 
     private val orchestrator = Orchestrator(
