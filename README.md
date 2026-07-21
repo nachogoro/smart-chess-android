@@ -6,17 +6,17 @@ everything else — the rules, move inference, clocks, engine and online play.
 
 ## Architecture
 
-The app is a client of the [Simple Chess Protocol](../simple-chess-protocol) (the specification).
-The protocol's module implementations live in the sibling [`simple-chess-scp`](../simple-chess-scp)
+The app is a client of the [Simple Chess Protocol](../smart-chess-protocol) (the specification).
+The protocol's module implementations live in the sibling [`smart-chess-scp`](../smart-chess-scp)
 repo; every one of them is reused unchanged, and only two modules are Android-specific:
 
 | SCP module | Where it comes from |
 |---|---|
 | Board | **This app** (`ble/BleBoardModule`) — reads the physical board over BLE |
 | UI | **This app** (`ui/AndroidUIModule`) — Compose |
-| Orchestrator, Game Controller, Engine adapters, Remote adapters | `simple-chess-scp`, unchanged |
+| Orchestrator, Game Controller, Engine adapters, Remote adapters | `smart-chess-scp`, unchanged |
 
-The SCP modules are consumed as a Gradle **composite build**, so edits in simple-chess-scp are
+The SCP modules are consumed as a Gradle **composite build**, so edits in smart-chess-scp are
 picked up immediately without publishing. See `settings.gradle.kts`.
 
 ```
@@ -128,22 +128,22 @@ wrapped at 80 columns and terminated by the result, so other chess software can 
 ## Building
 
 This app does not build in isolation. It consumes two sibling repositories as Gradle **composite
-builds**, referenced by relative path (`../simple-chess-scp`, `../simple-chess-kotlin` in
+builds**, referenced by relative path (`../smart-chess-scp`, `../simple-chess-kotlin` in
 `settings.gradle.kts`), so all three must be checked out side by side under the same parent
 directory:
 
 ```
 <parent>/
-├── simple-chess-android    # this repo
-├── simple-chess-scp        # the SCP module implementations
+├── smart-chess-android    # this repo
+├── smart-chess-scp        # the SCP module implementations
 └── simple-chess-kotlin     # the JNA wrapper over the native rules library
 ```
 
 ```sh
-git clone git@github.com:nachogoro/simple-chess-android.git
-git clone git@github.com:nachogoro/simple-chess-scp.git
+git clone git@github.com:nachogoro/smart-chess-android.git
+git clone git@github.com:nachogoro/smart-chess-scp.git
 git clone git@github.com:nachogoro/simple-chess-kotlin.git
-cd simple-chess-android
+cd smart-chess-android
 ```
 
 `simple-chess-kotlin` is built from source rather than taken from Maven Central because the

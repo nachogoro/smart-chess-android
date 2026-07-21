@@ -15,12 +15,12 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "simple-chess-android-app"
+rootProject.name = "smart-chess-android-app"
 
 include(":app")
 
 // The SCP modules (scp-core, orchestrator, game controller, engine and remote adapters) live in
-// the sibling simple-chess-scp repo and are consumed as a Gradle composite build, so edits there
+// the sibling smart-chess-scp repo and are consumed as a Gradle composite build, so edits there
 // are picked up immediately without publishing.
 //
 // Substitutions are declared explicitly rather than relying on auto-detection, because the scp
@@ -35,7 +35,7 @@ includeBuild("../simple-chess-kotlin") {
     }
 }
 
-includeBuild("../simple-chess-scp") {
+includeBuild("../smart-chess-scp") {
     dependencySubstitution {
         substitute(module("scp:scp-core")).using(project(":scp-core"))
         substitute(module("scp:orchestrator")).using(project(":orchestrator"))
