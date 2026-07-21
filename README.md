@@ -127,6 +127,29 @@ wrapped at 80 columns and terminated by the result, so other chess software can 
 
 ## Building
 
+This app does not build in isolation. It consumes two sibling repositories as Gradle **composite
+builds**, referenced by relative path (`../simple-chess-scp`, `../simple-chess-kotlin` in
+`settings.gradle.kts`), so all three must be checked out side by side under the same parent
+directory:
+
+```
+<parent>/
+├── simple-chess-android    # this repo
+├── simple-chess-scp        # the SCP module implementations
+└── simple-chess-kotlin     # the JNA wrapper over the native rules library
+```
+
+```sh
+git clone git@github.com:nachogoro/simple-chess-android.git
+git clone git@github.com:nachogoro/simple-chess-scp.git
+git clone git@github.com:nachogoro/simple-chess-kotlin.git
+cd simple-chess-android
+```
+
+`simple-chess-kotlin` is built from source rather than taken from Maven Central because the
+published `simplechess` 1.0.0 frees native pointers through `java.lang.ref.Cleaner`, which is API
+33+ (see "Native chess library" above). Then:
+
 ```sh
 # Requires an Android SDK; see local.properties
 ./gradlew :app:assembleDebug
