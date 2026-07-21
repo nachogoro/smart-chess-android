@@ -71,7 +71,7 @@ kotlin {
 
 dependencies {
     // --- SCP core (consumed from the sibling repo via composite build) ---
-    implementation("scp:protocol:0.1.0")
+    implementation("scp:scp-core:0.1.0")
 
     // Both of these reach `simplechess`, which declares the *desktop* JNA jar as an api
     // dependency (and pulls it in again via jna-platform). That jar carries no libjnidispatch.so

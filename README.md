@@ -6,16 +6,17 @@ everything else — the rules, move inference, clocks, engine and online play.
 
 ## Architecture
 
-The app is a client of the [Simple Chess Protocol](../simple-chess-protocol). Every SCP module is
-reused unchanged from that repo; only two modules are Android-specific:
+The app is a client of the [Simple Chess Protocol](../simple-chess-protocol) (the specification).
+The protocol's module implementations live in the sibling [`simple-chess-scp`](../simple-chess-scp)
+repo; every one of them is reused unchanged, and only two modules are Android-specific:
 
 | SCP module | Where it comes from |
 |---|---|
 | Board | **This app** (`ble/BleBoardModule`) — reads the physical board over BLE |
 | UI | **This app** (`ui/AndroidUIModule`) — Compose |
-| Orchestrator, Game Controller, Engine adapters, Remote adapters | `simple-chess-protocol/scp`, unchanged |
+| Orchestrator, Game Controller, Engine adapters, Remote adapters | `simple-chess-scp`, unchanged |
 
-The SCP modules are consumed as a Gradle **composite build**, so edits in the protocol repo are
+The SCP modules are consumed as a Gradle **composite build**, so edits in simple-chess-scp are
 picked up immediately without publishing. See `settings.gradle.kts`.
 
 ```

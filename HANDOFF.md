@@ -41,8 +41,9 @@ anywhere. The UI only ever says *"I have finished moving"*, and the orchestrator
 
 ## 2. Architecture
 
-The app is one client of the **Simple Chess Protocol** (SCP), which lives in the sibling
-`simple-chess-protocol` repo. SCP is a star topology: the Orchestrator is the hub, and modules never
+The app is one client of the **Simple Chess Protocol** (SCP). The specification lives in the sibling
+`simple-chess-protocol` repo; its Kotlin module implementations live in `simple-chess-scp`, which
+this app consumes. SCP is a star topology: the Orchestrator is the hub, and modules never
 talk to each other directly.
 
 Of SCP's six modules, this app supplies **two**. The rest are reused unchanged, and are shared with
@@ -52,8 +53,8 @@ the desktop app.
 |---|---|
 | **Board** | **This app** — `ble/BleBoardModule`, reads the physical board over BLE |
 | **UI** | **This app** — `ui/AndroidUIModule`, Compose |
-| Orchestrator | `simple-chess-protocol/scp`, unchanged |
-| Game Controller | `simple-chess-protocol/scp`, unchanged (wraps the native rules engine) |
+| Orchestrator | `simple-chess-scp`, unchanged |
+| Game Controller | `simple-chess-scp`, unchanged (wraps the native rules engine) |
 | Engine Adapter | `scp:engine-carballo` and `scp:engine-remote-stockfish`, unchanged |
 | Remote Adapter | `scp:remote-lichess`, unchanged |
 
@@ -146,7 +147,7 @@ instrumented tests pass on the API 30 emulator.
 
 | Phase | Scope | Tag |
 |---|---|---|
-| A | scp remote adapters moved off `java.net.http` onto OkHttp | *(in the protocol repo)* |
+| A | scp remote adapters moved off `java.net.http` onto OkHttp | *(in simple-chess-scp)* |
 | B | Scaffold, BLE board, Compose UI, settings, local PvP | `phase-b-local-pvp` |
 | C | Play an on-device engine (Carballo) | `phase-c-engine` |
 | D | Play a remote opponent (Lichess) | `phase-d-remote` |
@@ -167,7 +168,7 @@ proves that mapping works.
 Two sibling repos needed changes; both are committed, and both are consumed as Gradle **composite
 builds**, so edits there are picked up with no publishing step.
 
-- **`simple-chess-protocol`** @ `c0160a5` — the Lichess and remote-Stockfish adapters use OkHttp
+- **`simple-chess-scp`** @ `b24100e` — the Lichess and remote-Stockfish adapters use OkHttp
   now, because `java.net.http.HttpClient` does not exist on Android below API 34. The modules also
   emit Java 17 bytecode while compiling on the JDK 21 toolchain, because D8 rejects class-file 65.
 - **`simple-chess-kotlin`** @ `b82dc5a` — `java.lang.ref.Cleaner` replaced with a
@@ -228,7 +229,7 @@ module itself.
 ### Live Lichess has never been contacted
 
 Remote play needs an API token with the `board:play` scope. The HTTP layer is tested under ART
-against a mock server, and the adapter's state machine is tested on the JVM in the protocol repo,
+against a mock server, and the adapter's state machine is tested on the JVM in simple-chess-scp,
 but the two have never been put together against the real service.
 
 ### chess-api.com has never been contacted
@@ -348,7 +349,7 @@ once in game setup (it is masked and persisted), and seek a casual game. Things 
   behaviour, not a bug.
 - A dropped connection surfaces as an error banner and the game stops updating. The adapter has
   **no reconnect logic**, so the game is dead at that point; Abort is the way out. If this proves
-  annoying in practice, reconnection belongs in the adapter, in the protocol repo.
+  annoying in practice, reconnection belongs in the adapter, in simple-chess-scp.
 
 ### Optional next features
 
@@ -358,7 +359,7 @@ once in game setup (it is masked and persisted), and seek a casual game. Things 
   engine falls back to its own setting. For Carballo that is a hardcoded depth-10 search (~1.5s on
   the emulator) that the user cannot change; remote Stockfish exposes `Depth` as a parameter, so
   there it is adjustable in the setup form. If Carballo's fixed depth proves unpleasant on a slow
-  device, the call site to change is `MoveHandling.kt` in the protocol repo — the UI has no hook.
+  device, the call site to change is `MoveHandling.kt` in simple-chess-scp — the UI has no hook.
 - **Drop the `simple-chess-kotlin` composite build** once `NativeCleaner` ships to Maven Central.
 
 ### Conventions to keep

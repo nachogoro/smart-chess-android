@@ -28,8 +28,9 @@ is `./gradlew :app:connectedDebugAndroidTest` and needs a running device.
 
 Phases A and B needed changes in two sibling repos, both committed:
 
-- `simple-chess-protocol` — remote adapters moved to OkHttp; modules emit Java
-  17 bytecode (D8 rejects class-file 65).
+- `simple-chess-scp` — remote adapters moved to OkHttp; modules emit Java
+  17 bytecode (D8 rejects class-file 65). (This code lived in `simple-chess-protocol`
+  until the repo split; the spec repo now holds only PROTOCOL.md.)
 - `simple-chess-kotlin` — `java.lang.ref.Cleaner` replaced with a
   `PhantomReference`-based `NativeCleaner`. `Cleaner` is API 33+, so the
   published 1.0.0 is unusable on most Android devices. **Core library
@@ -48,7 +49,7 @@ without publishing. Once the `NativeCleaner` fix reaches Maven Central, the
 - Remote play has **never run against live Lichess** — it needs a real API
   token with the `board:play` scope. `LichessHttpApiTest` covers the HTTP layer
   under ART against a mock server, and the adapter's own state machine is
-  covered by JVM tests in the protocol repo, but the two have not been put
+  covered by JVM tests in simple-chess-scp, but the two have not been put
   together against the real service.
 - BLE cannot be exercised on an emulator. Anything touching the board needs the
   real hardware. `EngineGameFlowTest` works around this with a fake board so the
@@ -57,7 +58,7 @@ without publishing. Once the `NativeCleaner` fix reaches Maven Central, the
 - The orchestrator asks engines for a move with no time or depth limit, so every
   engine move is a fixed depth-10 search (~1.5s for Carballo on the API 30
   emulator). If a slower engine or device makes that unpleasant, the call site
-  to change is `MoveHandling.kt` in the protocol repo - the UI has no hook.
+  to change is `MoveHandling.kt` in simple-chess-scp - the UI has no hook.
 
 ## Ordered next steps
 
