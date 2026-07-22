@@ -88,6 +88,7 @@ fun GameScreen(
                 label = session?.blackName ?: "Black",
                 timeMs = session?.clocks?.blackMs,
                 isActive = turnColor == ChessColor.BLACK,
+                incrementMs = session?.timeControl?.incrementMs ?: 0L,
                 rotated = true,
                 modifier = Modifier.fillMaxWidth().weight(1f),
             )
@@ -109,6 +110,7 @@ fun GameScreen(
                 label = session?.whiteName ?: "White",
                 timeMs = session?.clocks?.whiteMs,
                 isActive = turnColor == ChessColor.WHITE,
+                incrementMs = session?.timeControl?.incrementMs ?: 0L,
                 rotated = false,
                 modifier = Modifier.fillMaxWidth().weight(1f),
             )
@@ -218,20 +220,22 @@ private fun CenterPanel(
  * One player's clock.
  *
  * [timeMs] is the snapshot from the last move. The displayed value resets to it whenever new clock
- * values arrive, and ticks down only while this side is active, so an inactive side holds its last
- * value rather than following the snapshot.
+ * values arrive, ticks down only while this side is active, and otherwise holds — including gaining
+ * [incrementMs] when this side completes a move.
  *
- * The inactive side must hold, because in a remote game the server is the clock authority and
- * reports the times only on the opponent's move: [timeMs] does not change when we move, so between
- * our move and the opponent's reply the snapshot for our side is stale. Holding keeps our clock
- * steady until the exact server figure arrives on the next move. Local and engine games update the
- * snapshot on every move, so nothing is actually held there.
+ * This matters for remote games: the server is the clock authority and reports the times only on
+ * the opponent's move, so [timeMs] does not change when we move. Between our move and the
+ * opponent's reply the snapshot for our side is stale, so we hold the ticked value and credit the
+ * increment the move earned, giving the time we actually have until the server figure arrives.
+ * Local and engine games refresh [timeMs] every move (already with the increment), so nothing is
+ * held or credited there.
  */
 @Composable
 private fun ClockPanel(
     label: String,
     timeMs: Long?,
     isActive: Boolean,
+    incrementMs: Long,
     rotated: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -245,6 +249,15 @@ private fun ClockPanel(
             displayMs = (base - (System.currentTimeMillis() - startedAt)).coerceAtLeast(0)
             delay(200)
         }
+    }
+
+    // Credit the increment when this side stops being active without a fresh base (we moved).
+    var wasActive by remember(timeMs) { mutableStateOf(isActive) }
+    LaunchedEffect(isActive) {
+        if (wasActive && !isActive) {
+            displayMs?.let { displayMs = it + incrementMs }
+        }
+        wasActive = isActive
     }
 
     val remaining = displayMs
