@@ -43,20 +43,7 @@ android {
     }
 
     packaging {
-        jniLibs {
-            // JNA ships libjnidispatch.so; our own native chess library lives in src/main/jniLibs.
-            useLegacyPackaging = false
-        }
         resources {
-            // The `simplechess` JAR bundles native binaries as JAR *resources* so that a desktop
-            // JVM can extract them to a temp dir at runtime. That strategy does not work on
-            // Android: the linker refuses to dlopen from an app-writable temp directory.
-            //
-            // We therefore ship the .so files in src/main/jniLibs/<abi>/ (so they land in the
-            // app's nativeLibraryDir) and strip the JAR-resource copies here. Excluding them is
-            // not merely a size optimisation - it makes the library's extraction step fail fast
-            // and fall back to loading from the system path, which is the path that works.
-            excludes += "/native/**"
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "/META-INF/DEPENDENCIES"
         }
@@ -70,40 +57,20 @@ kotlin {
 }
 
 dependencies {
-    // --- SCP core (consumed from the sibling repo via composite build) ---
+    // --- SCP modules (from the sibling smart-chess-scp repo via composite build) ---
     implementation("scp:scp-core:0.1.0")
+    implementation("scp:orchestrator:0.1.0")
+    implementation("scp:game-controller:0.1.0")
+    implementation("scp:engine-carballo:0.1.0")
+    implementation("scp:engine-remote-stockfish:0.1.0")
+    implementation("scp:remote-lichess:0.1.0")
 
-    // Both of these reach `simplechess`, which declares the *desktop* JNA jar as an api
-    // dependency (and pulls it in again via jna-platform). That jar carries no libjnidispatch.so
-    // for Android and collides class-for-class with the Android AAR, so it is excluded from both
-    // subtrees. These exclusions must be per-dependency: a configuration-wide exclude would also
-    // drop the directly-declared AAR below, leaving no JNA on the classpath at all.
-    implementation("scp:orchestrator:0.1.0") {
-        exclude(group = "net.java.dev.jna", module = "jna")
-    }
-    implementation("scp:game-controller:0.1.0") {
-        exclude(group = "net.java.dev.jna", module = "jna")
-    }
-
-    // Carballo runs the engine on-device, so engine play needs no network and no API key.
-    implementation("scp:engine-carballo:0.1.0") {
-        exclude(group = "net.java.dev.jna", module = "jna")
-    }
-
-    // A second engine, played over the network rather than on-device. Stronger than Carballo at
-    // the cost of needing a connection, so the two are complementary rather than redundant.
-    implementation("scp:engine-remote-stockfish:0.1.0") {
-        exclude(group = "net.java.dev.jna", module = "jna")
-    }
-
-    // Online play. Reaches Lichess over OkHttp: the JDK HTTP client the adapter originally used
-    // is unavailable on Android below API 34.
-    implementation("scp:remote-lichess:0.1.0") {
-        exclude(group = "net.java.dev.jna", module = "jna")
-    }
-
-    // JNA, Android variant: unlike the desktop jar, this AAR ships libjnidispatch.so per ABI.
-    implementation("net.java.dev.jna:jna:5.13.0@aar")
+    // The native rules library, Android packaging. This AAR bundles the C library's .so and the JNA
+    // AAR (libjnidispatch.so), so the app needs no manual native setup: no committed jniLibs, no
+    // separate JNA dependency, no resource stripping. It carries the same `simplechess` classes the
+    // scp modules compile against; the plain jar they pull transitively is dropped (see below) to
+    // avoid duplicating those classes.
+    implementation("io.github.nachogoro:simplechess-android:1.1.0")
 
     // --- Coroutines / AndroidX ---
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
@@ -135,10 +102,16 @@ dependencies {
     // Lets the Lichess HTTP layer be exercised under ART without a Lichess account.
     androidTestImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 
-    // Direct access to the raw simplechess Game API for the native-cleanup test. The build-wide
-    // comes from Maven Central via the scp modules, so the test
-    // exercises exactly the code that would be published, not the stale 1.0.0 on Maven Central.
-    androidTestImplementation("io.github.nachogoro:simplechess:1.1.0") {
-        exclude(group = "net.java.dev.jna", module = "jna")
-    }
+    // Direct access to the raw simplechess Game API for the native tests. The AAR (not the jar,
+    // which is excluded below) so the test resolves the same artifact the app ships.
+    androidTestImplementation("io.github.nachogoro:simplechess-android:1.1.0")
+}
+
+// The scp modules pull the plain `simplechess` jar transitively; the simplechess-android AAR above
+// carries the same classes plus the native libraries, so the jar is dropped everywhere to avoid
+// duplicate classes at dex time. A configuration-wide exclude is safe here (unlike for JNA) because
+// the AAR is a different module - `simplechess-android`, not `simplechess` - so it is untouched.
+// Excluding the jar also drops the desktop JNA it depended on; JNA arrives as the AAR's dependency.
+configurations.all {
+    exclude(group = "io.github.nachogoro", module = "simplechess")
 }

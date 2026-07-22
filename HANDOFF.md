@@ -4,7 +4,7 @@ A single document to read before touching this code. It covers what the app is, 
 together, what has been built and verified, what has *not*, how to review the work, and what to do
 next.
 
-Companion documents: `README.md` (how to build and the Android-specific traps), `PLAN.md` (live
+Companion documents: `README.md` (how to build and the native-library handling), `PLAN.md` (live
 phase status). This file is the one that explains *why* things are the way they are.
 
 ---
@@ -177,22 +177,26 @@ builds**, so edits there are picked up with no publishing step.
   desugaring does not fix this** — `desugar_jdk_libs` covers no `java.lang.ref` classes at all.
   Once this reaches Maven Central, the composite build for this repo can be dropped.
 
-### The four Android-specific traps, and why they are not obvious
+### Native libraries: the AAR does the heavy lifting
 
-These cost the most time and will silently reappear if someone "tidies" the build file.
+The app consumes `io.github.nachogoro:simplechess-android` (the AAR) from Maven Central, which
+bundles the C library's `.so` and the JNA AAR. So the app itself carries **no** native setup — the
+three delivery problems that used to live here (committing `.so` in `jniLibs`, using the JNA AAR not
+the JAR, stripping the jar's `native/**` resources) are all the AAR's responsibility now.
 
-1. **The native `.so` files are committed** under `app/src/main/jniLibs/<abi>/`. Android's linker
-   only `dlopen`s from the app's `nativeLibraryDir`.
-2. **JNA is the AAR, not the JAR.** Only the AAR ships `libjnidispatch.so`. The desktop JAR arrives
-   transitively via `simplechess` and is excluded *per dependency* — a configuration-wide exclude
-   would also drop the AAR, leaving no JNA at all.
-3. **`native/**` is stripped from packaged resources.** Otherwise the library tries to extract its
-   bundled `.so` to a temp dir and load it from there, which Android forbids. Removing the resources
-   makes it fall through to the system path, which works.
-4. **No `java.lang.ref.Cleaner`** — see above.
+The one thing the app's build does: the scp modules pull the plain `simplechess` **jar**
+transitively, which duplicates the AAR's classes, so the jar is excluded config-wide in
+`app/build.gradle.kts`. That is safe here (unlike for JNA) because the AAR is a *different* module,
+`simplechess-android` — a config-wide exclude of `simplechess` leaves it untouched — and it also
+drops the desktop JNA the jar depended on.
 
-`NativeChessLibraryTest` is the guard on all four, and it **must run on a device below API 33** or
-it cannot catch a `Cleaner` regression at all.
+The remaining hard requirement is the version: **`simplechess` 1.1.0 or newer**. 1.0.0 freed native
+pointers through `java.lang.ref.Cleaner` (API 33+), throwing `NoClassDefFoundError` on older Android;
+1.1.0 replaced it with a `PhantomReference`-based cleaner. Core library desugaring does not fix the
+1.0.0 problem — `desugar_jdk_libs` covers no `java.lang.ref` classes.
+
+`NativeChessLibraryTest` is the guard, and it **must run on a device below API 33** or it cannot
+catch a `Cleaner` regression at all.
 
 ### Tests
 
@@ -201,7 +205,7 @@ runtime behaviour that compiles perfectly well when broken.
 
 | Test | What it protects |
 |---|---|
-| `NativeChessLibraryTest` | The four traps above; plays real moves through the C rules engine |
+| `NativeChessLibraryTest` | The native library actually loads and runs; plays real moves through the C rules engine |
 | `CarballoEngineTest` | The engine runs under ART, loads its opening book from a classpath resource, declares its parameters, and rejects undeclared ones |
 | `EngineGameFlowTest` | A full engine game through the **real orchestrator** — mode selection, config handshake, move inference, engine reply. Also that with two engines the app asks which to play and routes to the chosen one. Only the BLE board is faked |
 | `LichessHttpApiTest` | The OkHttp rewrite under ART against a mock server: bearer token, error status codes, NDJSON line splitting, and that an abandoned stream is cut short rather than drained |
@@ -275,7 +279,9 @@ this document ever disagree, trust the tag — it was written with the evidence 
 
 If you read nothing else, read these five, in this order:
 
-1. `9e9390d` **Run the native chess rules engine on Android** — the four traps, and the reasoning.
+1. `9e9390d` **Run the native chess rules engine on Android** — the original native-loading traps
+   and the reasoning (since superseded by the `simplechess-android` AAR; the reasoning still explains
+   *why* Android native loading is hard).
 2. `7dcf9ba` **Wire up local player vs local player** — how the parts join up.
 3. `43a4b81` **Build the chess wrapper from source** — the `Cleaner` problem and why desugaring is a
    dead end.

@@ -41,31 +41,25 @@ behind an optional toggle purely so a player can confirm the two are in sync.
 
 ## Native chess library
 
-The rules engine is a C library reached through JNA (`io.github.nachogoro:simplechess`, from Maven
-Central). Getting it onto Android needs four things that are easy to get wrong:
+The rules engine is a C library reached through JNA. On Android the app consumes the turnkey
+**`io.github.nachogoro:simplechess-android`** AAR (from Maven Central), which bundles the C library's
+`.so` for every ABI and the JNA AAR (`libjnidispatch.so`). So the app does **no** native setup of
+its own — no committed `jniLibs`, no separate JNA dependency, no resource stripping. The AAR delivers
+those into the APK's `nativeLibraryDir`, the only place Android's linker will load them from.
 
-1. **`jniLibs/<abi>/libsimple-chess-games-c.so`** — the binaries are committed under
-   `app/src/main/jniLibs/`. Android's linker will only `dlopen` from the app's `nativeLibraryDir`,
-   which is where these end up.
-2. **The JNA *AAR*, not the JAR** — only the AAR ships `libjnidispatch.so`. The desktop JAR arrives
-   transitively via `simplechess` and is excluded per-dependency in `app/build.gradle.kts`.
-3. **Stripping `native/**` from packaged resources** — the library otherwise tries to extract its
-   bundled `.so` to a temp directory and load from there, which Android forbids. Removing those
-   resources makes it fall through to the system path, which works.
-4. **No `java.lang.ref.Cleaner`** — `simplechess` 1.0.0 froze native pointers through `Cleaner`,
-   which is API 33+, so it threw `NoClassDefFoundError` on anything older. 1.1.0 uses a
-   `PhantomReference`-based replacement, so this app depends on **1.1.0 or newer**. Core library
-   desugaring does *not* fix the 1.0.0 problem: `desugar_jdk_libs` covers no `java.lang.ref` classes.
+The one wrinkle the app handles: the scp modules compile against the plain `simplechess` **jar** and
+pull it in transitively. That jar carries the same classes as the AAR, so it is excluded build-wide
+in `app/build.gradle.kts` to avoid duplicate classes — safe to do config-wide because the AAR is a
+different module (`simplechess-android`), and it also drops the desktop JNA the jar depended on.
 
-There is also a turnkey **`io.github.nachogoro:simplechess-android`** AAR that bundles the `.so` and
-the JNA AAR, removing traps 1–3 for a consumer. This app does not use it yet — it keeps the manual
-`jniLibs` setup — because the scp modules pull the plain `simplechess` jar transitively, and mixing
-the two would duplicate classes. Switching fully to the AAR is possible but needs that dependency
-untangled.
+The app requires **`simplechess` 1.1.0 or newer**: 1.0.0 froze native pointers through
+`java.lang.ref.Cleaner` (API 33+), throwing `NoClassDefFoundError` on older Android; 1.1.0 uses a
+`PhantomReference`-based replacement. Core library desugaring does *not* fix the 1.0.0 problem —
+`desugar_jdk_libs` covers no `java.lang.ref` classes.
 
 `NativeChessLibraryTest` (instrumented) plays real moves through the engine and is the check that
-all four are still correct. It must run on a device or emulator — and on one below API 33, or it
-cannot catch a `Cleaner` regression.
+the native library actually loads and runs. It must run on a device or emulator — and on one below
+API 33, or it cannot catch a `Cleaner` regression.
 
 ## Engine play
 
