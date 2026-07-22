@@ -29,7 +29,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -48,7 +47,6 @@ import com.nachogoro.smartchess.ui.components.STARTING_FEN
 import kotlinx.coroutines.delay
 import scp.orchestrator.GameSession
 import scp.orchestrator.OrchestratorState
-import scp.protocol.Clocks
 import scp.protocol.Color as ChessColor
 import scp.protocol.GameMode
 import scp.protocol.PromotionPiece
@@ -92,9 +90,6 @@ fun GameScreen(
                 isActive = turnColor == ChessColor.BLACK,
                 rotated = true,
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                baseClocks = session?.clocks,
-                activeColor = turnColor,
-                color = ChessColor.BLACK,
             )
 
             CenterPanel(
@@ -116,9 +111,6 @@ fun GameScreen(
                 isActive = turnColor == ChessColor.WHITE,
                 rotated = false,
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                baseClocks = session?.clocks,
-                activeColor = turnColor,
-                color = ChessColor.WHITE,
             )
         }
     }
@@ -225,9 +217,15 @@ private fun CenterPanel(
 /**
  * One player's clock.
  *
- * The session only carries a snapshot taken at the last move, so the active side is counted down
- * locally from that snapshot. When a remote server is the authority its values simply replace the
- * snapshot on the next move, and the countdown restarts from the corrected figure.
+ * [timeMs] is the snapshot from the last move. The displayed value resets to it whenever new clock
+ * values arrive, and ticks down only while this side is active, so an inactive side holds its last
+ * value rather than following the snapshot.
+ *
+ * The inactive side must hold, because in a remote game the server is the clock authority and
+ * reports the times only on the opponent's move: [timeMs] does not change when we move, so between
+ * our move and the opponent's reply the snapshot for our side is stale. Holding keeps our clock
+ * steady until the exact server figure arrives on the next move. Local and engine games update the
+ * snapshot on every move, so nothing is actually held there.
  */
 @Composable
 private fun ClockPanel(
@@ -236,22 +234,20 @@ private fun ClockPanel(
     isActive: Boolean,
     rotated: Boolean,
     modifier: Modifier = Modifier,
-    baseClocks: Clocks?,
-    activeColor: ChessColor?,
-    color: ChessColor,
 ) {
-    var elapsedMs by remember(baseClocks, activeColor) { mutableLongStateOf(0L) }
+    var displayMs by remember(timeMs) { mutableStateOf(timeMs) }
 
-    LaunchedEffect(baseClocks, activeColor) {
-        if (activeColor != color) return@LaunchedEffect
+    LaunchedEffect(timeMs, isActive) {
+        val base = timeMs ?: return@LaunchedEffect
+        if (!isActive) return@LaunchedEffect
         val startedAt = System.currentTimeMillis()
         while (true) {
+            displayMs = (base - (System.currentTimeMillis() - startedAt)).coerceAtLeast(0)
             delay(200)
-            elapsedMs = System.currentTimeMillis() - startedAt
         }
     }
 
-    val remaining = timeMs?.let { if (isActive) (it - elapsedMs).coerceAtLeast(0) else it }
+    val remaining = displayMs
     val lowOnTime = remaining != null && remaining < 30_000
 
     val background = when {
