@@ -171,9 +171,9 @@ builds**, so edits there are picked up with no publishing step.
 - **`smart-chess-scp`** @ `b24100e` — the Lichess and remote-Stockfish adapters use OkHttp
   now, because `java.net.http.HttpClient` does not exist on Android below API 34. The modules also
   emit Java 17 bytecode while compiling on the JDK 21 toolchain, because D8 rejects class-file 65.
-- **`simple-chess-kotlin`** @ `b82dc5a` — `java.lang.ref.Cleaner` replaced with a
-  `PhantomReference`-based `NativeCleaner`. `Cleaner` is API 33+, so the published `simplechess`
-  1.0.0 throws `NoClassDefFoundError` on most Android devices at the first move. **Core library
+- **`simple-chess-kotlin`** (published as `simplechess` 1.1.0) — `java.lang.ref.Cleaner` replaced
+  with a `PhantomReference`-based `NativeCleaner`. `Cleaner` is API 33+, so the earlier `simplechess`
+  1.0.0 threw `NoClassDefFoundError` on most Android devices at the first move. **Core library
   desugaring does not fix this** — `desugar_jdk_libs` covers no `java.lang.ref` classes at all.
   Once this reaches Maven Central, the composite build for this repo can be dropped.
 
@@ -360,7 +360,9 @@ once in game setup (it is masked and persisted), and seek a casual game. Things 
   the emulator) that the user cannot change; remote Stockfish exposes `Depth` as a parameter, so
   there it is adjustable in the setup form. If Carballo's fixed depth proves unpleasant on a slow
   device, the call site to change is `MoveHandling.kt` in smart-chess-scp — the UI has no hook.
-- **Drop the `simple-chess-kotlin` composite build** once `NativeCleaner` ships to Maven Central.
+- ~~Drop the `simple-chess-kotlin` composite build once `NativeCleaner` ships to Maven Central.~~
+  **Done** — `simplechess` 1.1.0 is on Maven Central; the app now pulls it transitively via scp
+  rather than composite-building the library.
 
 ### Conventions to keep
 

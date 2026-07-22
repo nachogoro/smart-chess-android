@@ -37,9 +37,10 @@ Phases A and B needed changes in two sibling repos, both committed:
   desugaring does not fix this** — `desugar_jdk_libs` covers no `java.lang.ref`
   classes at all.
 
-Both are consumed as Gradle **composite builds**, so edits there are picked up
-without publishing. Once the `NativeCleaner` fix reaches Maven Central, the
-`simple-chess-kotlin` composite build can be dropped for the published artifact.
+`smart-chess-scp` is consumed as a Gradle **composite build**, so edits there are
+picked up without publishing. `simple-chess-kotlin` is no longer composite-built:
+its `NativeCleaner` fix shipped as `simplechess` 1.1.0 on Maven Central, and the
+app now pulls it transitively via scp.
 
 ## Testing notes
 

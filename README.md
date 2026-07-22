@@ -41,9 +41,8 @@ behind an optional toggle purely so a player can confirm the two are in sync.
 
 ## Native chess library
 
-The rules engine is a C library reached through JNA (`io.github.nachogoro:simplechess`, built from
-the sibling `simple-chess-kotlin` checkout — see below). Getting it onto Android needs four things
-that are easy to get wrong:
+The rules engine is a C library reached through JNA (`io.github.nachogoro:simplechess`, from Maven
+Central). Getting it onto Android needs four things that are easy to get wrong:
 
 1. **`jniLibs/<abi>/libsimple-chess-games-c.so`** — the binaries are committed under
    `app/src/main/jniLibs/`. Android's linker will only `dlopen` from the app's `nativeLibraryDir`,
@@ -53,11 +52,16 @@ that are easy to get wrong:
 3. **Stripping `native/**` from packaged resources** — the library otherwise tries to extract its
    bundled `.so` to a temp directory and load from there, which Android forbids. Removing those
    resources makes it fall through to the system path, which works.
-4. **No `java.lang.ref.Cleaner`** — the published `simplechess` 1.0.0 frees native pointers through
-   `Cleaner`, which is API 33+, so it throws `NoClassDefFoundError` on anything older. The wrapper
-   uses a `PhantomReference`-based replacement instead, and is consumed from the sibling
-   `simple-chess-kotlin` checkout via composite build until that reaches Maven Central. Core
-   library desugaring does *not* fix this: `desugar_jdk_libs` covers no `java.lang.ref` classes.
+4. **No `java.lang.ref.Cleaner`** — `simplechess` 1.0.0 froze native pointers through `Cleaner`,
+   which is API 33+, so it threw `NoClassDefFoundError` on anything older. 1.1.0 uses a
+   `PhantomReference`-based replacement, so this app depends on **1.1.0 or newer**. Core library
+   desugaring does *not* fix the 1.0.0 problem: `desugar_jdk_libs` covers no `java.lang.ref` classes.
+
+There is also a turnkey **`io.github.nachogoro:simplechess-android`** AAR that bundles the `.so` and
+the JNA AAR, removing traps 1–3 for a consumer. This app does not use it yet — it keeps the manual
+`jniLibs` setup — because the scp modules pull the plain `simplechess` jar transitively, and mixing
+the two would duplicate classes. Switching fully to the AAR is possible but needs that dependency
+untangled.
 
 `NativeChessLibraryTest` (instrumented) plays real moves through the engine and is the check that
 all four are still correct. It must run on a device or emulator — and on one below API 33, or it
@@ -127,28 +131,24 @@ wrapped at 80 columns and terminated by the result, so other chess software can 
 
 ## Building
 
-This app does not build in isolation. It consumes two sibling repositories as Gradle **composite
-builds**, referenced by relative path (`../smart-chess-scp`, `../simple-chess-kotlin` in
-`settings.gradle.kts`), so all three must be checked out side by side under the same parent
-directory:
+This app consumes the SCP modules from the sibling `smart-chess-scp` repository as a Gradle
+**composite build** (relative path `../smart-chess-scp` in `settings.gradle.kts`), so the two must
+be checked out side by side:
 
 ```
 <parent>/
 ├── smart-chess-android    # this repo
-├── smart-chess-scp        # the SCP module implementations
-└── simple-chess-kotlin     # the JNA wrapper over the native rules library
+└── smart-chess-scp        # the SCP module implementations
 ```
 
 ```sh
 git clone git@github.com:nachogoro/smart-chess-android.git
 git clone git@github.com:nachogoro/smart-chess-scp.git
-git clone git@github.com:nachogoro/simple-chess-kotlin.git
 cd smart-chess-android
 ```
 
-`simple-chess-kotlin` is built from source rather than taken from Maven Central because the
-published `simplechess` 1.0.0 frees native pointers through `java.lang.ref.Cleaner`, which is API
-33+ (see "Native chess library" above). Then:
+The native rules library (`io.github.nachogoro:simplechess`) comes from Maven Central, pulled in
+transitively by the scp modules — no sibling checkout of it is needed. Then:
 
 ```sh
 # Requires an Android SDK; see local.properties

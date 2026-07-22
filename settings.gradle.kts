@@ -26,15 +26,11 @@ include(":app")
 // Substitutions are declared explicitly rather than relying on auto-detection, because the scp
 // build assigns `group` inside a `subprojects {}` block, which is not always visible to Gradle's
 // automatic coordinate discovery.
-// The Kotlin wrapper around the native rules engine is likewise consumed from source rather than
-// from Maven Central. The published 1.0.0 frees native pointers through java.lang.ref.Cleaner,
-// which is API 33+ and so unusable here; building it from source picks up the replacement.
-includeBuild("../simple-chess-kotlin") {
-    dependencySubstitution {
-        substitute(module("io.github.nachogoro:simplechess")).using(project(":"))
-    }
-}
-
+//
+// The native rules engine (io.github.nachogoro:simplechess) is consumed from Maven Central, pulled
+// in transitively by the scp modules at the version they declare. It used to be composite-built
+// from ../simple-chess-kotlin because the published 1.0.0 froze native pointers through
+// java.lang.ref.Cleaner (API 33+); 1.1.0 replaced that, so the published artifact works on Android.
 includeBuild("../smart-chess-scp") {
     dependencySubstitution {
         substitute(module("scp:scp-core")).using(project(":scp-core"))

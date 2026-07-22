@@ -136,9 +136,9 @@ dependencies {
     androidTestImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 
     // Direct access to the raw simplechess Game API for the native-cleanup test. The build-wide
-    // dependency substitution routes this to the sibling simple-chess-kotlin project, so the test
+    // comes from Maven Central via the scp modules, so the test
     // exercises exactly the code that would be published, not the stale 1.0.0 on Maven Central.
-    androidTestImplementation("io.github.nachogoro:simplechess:1.0.0") {
+    androidTestImplementation("io.github.nachogoro:simplechess:1.1.0") {
         exclude(group = "net.java.dev.jna", module = "jna")
     }
 }
