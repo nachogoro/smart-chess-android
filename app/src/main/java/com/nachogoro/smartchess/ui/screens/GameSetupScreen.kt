@@ -109,6 +109,7 @@ fun GameSetupScreen(
 
             pendingEngineConfig != null -> EngineGameForm(
                 params = pendingEngineConfig.input,
+                playerName = settings.playerName,
                 savedValues = settings.settingsFor(pendingEngineConfig.input.engineName),
                 onSubmit = { config, rawValues ->
                     // Persist before completing: completing unparks the orchestrator, which
@@ -124,7 +125,9 @@ fun GameSetupScreen(
 
             pendingEngine != null -> EnginePicker(
                 engines = pendingEngine.input,
-                onSelect = { pendingEngine.complete(it.name) },
+                // The id, not the name: two adapters may report the same name, and then nothing
+                // would say which of them was picked.
+                onSelect = { pendingEngine.complete(it.id) },
                 onCancel = {
                     pendingEngine.cancel()
                     onBack()
@@ -149,7 +152,8 @@ fun GameSetupScreen(
 
             pendingPlatform != null -> PlatformPicker(
                 platforms = pendingPlatform.input,
-                onSelect = { pendingPlatform.complete(it.platform) },
+                // The id, not the name - see the engine picker.
+                onSelect = { pendingPlatform.complete(it.id) },
                 onCancel = {
                     pendingPlatform.cancel()
                     onBack()
@@ -302,6 +306,13 @@ private fun EnginePicker(
 @Composable
 private fun EngineGameForm(
     params: ConfigureEngineGameParams,
+    /**
+     * What to call the player, from settings rather than a field here: the app already asks for a
+     * name once and there is nothing engine-specific about it. Blank means the user never gave one,
+     * which the config carries as null. The orchestrator labels the board with this and the
+     * engine's own name, so it is what the game is filed under afterwards.
+     */
+    playerName: String,
     savedValues: Map<String, String>,
     onSubmit: (EngineGameConfig, Map<String, String>) -> Unit,
     onCancel: () -> Unit,
@@ -363,6 +374,7 @@ private fun EngineGameForm(
                 onSubmit(
                     EngineGameConfig(
                         playerColor = playerColor,
+                        playerName = playerName.trim().ifBlank { null },
                         engineSettings = parameterForm.toTypedValues(),
                         timeControl = timeControl.toTimeControl(),
                     ),

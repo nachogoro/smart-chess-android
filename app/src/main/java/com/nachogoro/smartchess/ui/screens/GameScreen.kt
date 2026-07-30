@@ -446,7 +446,10 @@ private fun GameDialogs(uiModule: AndroidUIModule, onGameEnd: () -> Unit) {
                 Column {
                     Text(summary.result.protocolString, style = MaterialTheme.typography.headlineSmall)
                     Spacer(Modifier.height(8.dp))
-                    Text(summary.termination.describe(LocalContext.current), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        summary.termination.describe(LocalContext.current, summary.result),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                     Spacer(Modifier.height(8.dp))
                     Text(
                         stringResource(R.string.game_moves_played, summary.moves.size),

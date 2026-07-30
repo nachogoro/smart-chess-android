@@ -24,7 +24,6 @@ import scp.orchestrator.Orchestrator
 import scp.protocol.BoardCapabilities
 import scp.protocol.BoardCapabilityLevel
 import scp.protocol.BoardError
-import scp.protocol.BoardErrorEvent
 import scp.protocol.BoardModule
 import scp.protocol.BestMoveResult
 import scp.protocol.BoardState
@@ -32,7 +31,6 @@ import scp.protocol.Color
 import scp.protocol.EngineAdapterModule
 import scp.protocol.EngineCapabilities
 import scp.protocol.EngineError
-import scp.protocol.EngineErrorEvent
 import scp.protocol.EngineGameConfig
 import scp.protocol.GetBestMoveParams
 import scp.protocol.GameMode
@@ -92,6 +90,7 @@ class EngineGameFlowTest {
             prompt.complete(
                 EngineGameConfig(
                     playerColor = Color.WHITE,
+                    playerName = null,
                     engineSettings = emptyMap(),
                     timeControl = null,
                 )
@@ -103,7 +102,7 @@ class EngineGameFlowTest {
             // Play 1.e4 by moving the pieces on the board and then "pressing the clock". The
             // orchestrator infers the move by diffing this reading against the game position.
             board.setPosition(AFTER_E4_FEN)
-            ui.signalMoveReady(gameId)
+            ui.signalMoveReady(gameId, Color.WHITE)
 
             awaitUntil("engine to reply", timeoutMs = ENGINE_REPLY_TIMEOUT_MS) {
                 ui.lastOpponentMove != null
@@ -150,21 +149,23 @@ class EngineGameFlowTest {
             assertEquals(2, choices.size)
             assertTrue("Engines not named: $choices", choices.all { it.name.isNotBlank() })
 
-            // Pick the second one. The orchestrator resolves the answer back to an adapter by
-            // name, so choosing anything other than the first is what proves the mapping works.
-            ui.pendingEngineSelection!!.complete("Stub Engine")
+            // Pick the second one. The orchestrator resolves the answer back to an adapter by id,
+            // so choosing anything other than the first is what proves the mapping works. The id is
+            // looked up rather than written out: what identifies an engine is the picker's business
+            // and not this test's.
+            ui.pendingEngineSelection!!.complete(choices.first { it.name == "Stub Engine" }.id)
 
             awaitUntil("engine configuration prompt") { ui.pendingEngineGameConfig != null }
             assertEquals("Stub Engine", ui.pendingEngineGameConfig!!.input.engineName)
             ui.pendingEngineGameConfig!!.complete(
-                EngineGameConfig(Color.WHITE, emptyMap(), timeControl = null)
+                EngineGameConfig(Color.WHITE, playerName = null, engineSettings = emptyMap(), timeControl = null)
             )
 
             awaitUntil("game to start") { ui.lastGameStartedInfo != null }
             val gameId = ui.lastGameStartedInfo!!.gameId
 
             board.setPosition(AFTER_E4_FEN)
-            ui.signalMoveReady(gameId)
+            ui.signalMoveReady(gameId, Color.WHITE)
 
             awaitUntil("engine to reply") { ui.lastOpponentMove != null }
             // The chosen engine played, not the other one. Carballo would essentially never
@@ -186,7 +187,7 @@ class EngineGameFlowTest {
         private val name: String,
         private val move: String,
     ) : EngineAdapterModule {
-        override val errors: SharedFlow<EngineErrorEvent> = MutableSharedFlow()
+        override val errors: SharedFlow<EngineError> = MutableSharedFlow()
 
         override suspend fun getCapabilities(): Result<EngineError, EngineCapabilities> =
             Result.Success(EngineCapabilities(name = name, author = "test", parameters = emptyList()))
@@ -212,7 +213,7 @@ class EngineGameFlowTest {
         @Volatile
         private var squares: Map<String, SquareState> = squaresFromFen(initialFen)
 
-        override val errors: SharedFlow<BoardErrorEvent> = MutableSharedFlow()
+        override val errors: SharedFlow<BoardError> = MutableSharedFlow()
 
         fun setPosition(fen: String) {
             squares = squaresFromFen(fen)

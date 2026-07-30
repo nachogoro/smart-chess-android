@@ -12,7 +12,7 @@ import androidx.room.RoomDatabase
 import kotlinx.coroutines.flow.Flow
 import org.json.JSONArray
 import org.json.JSONObject
-import scp.protocol.DrawKind
+import scp.protocol.GameResult
 import scp.protocol.GameSummary
 import scp.protocol.Termination
 
@@ -39,11 +39,10 @@ data class GameRecord(
      * How the game ended, kept as codes so a stored game can be re-worded later rather than being
      * frozen in the language it was played in.
      *
-     * [authorityCode] and [terminationText] belong to the draw kind when [terminationCode] is
-     * `DRAWN`, and to the termination itself otherwise; only the `OTHER` cases carry them.
+     * [authorityCode] and [terminationText] are the unrecognised termination's own identifier and
+     * words; only the `OTHER` case carries them.
      */
     val terminationCode: String,
-    val drawKindCode: String? = null,
     val authorityCode: String? = null,
     val terminationText: String? = null,
     @ColumnInfo(name = "final_fen") val finalFen: String,
@@ -62,24 +61,28 @@ data class GameRecord(
          * @param playedAt when the game finished; passed in rather than read here so the caller
          *   controls the clock and this stays testable.
          */
-        fun from(summary: GameSummary, playedAt: Long): GameRecord = GameRecord(
-            gameId = summary.gameId,
-            playedAt = playedAt,
-            mode = summary.mode.name,
-            whiteName = summary.whiteName,
-            blackName = summary.blackName,
-            playerColor = summary.playerColor?.name,
-            result = summary.result.protocolString,
-            terminationCode = summary.termination.code,
-            drawKindCode = (summary.termination as? Termination.Drawn)?.kind?.code,
-            authorityCode = summary.termination.authorityCode(),
-            terminationText = summary.termination.text(),
-            finalFen = summary.finalFen,
-            timeControl = summary.timeControl?.let { "${it.type.name}:${it.initialMs}:${it.incrementMs}" },
-            movesJson = encodeMoves(
-                summary.moves.map { StoredMove(san = it.san, uci = it.move, fen = it.fen) }
-            ),
-        )
+        fun from(summary: GameSummary, playedAt: Long): GameRecord {
+            // Only an unrecognised cause carries an authority's own code or words; every other
+            // termination is fully described by its own code.
+            val unrecognised = summary.termination as? Termination.Other
+            return GameRecord(
+                gameId = summary.gameId,
+                playedAt = playedAt,
+                mode = summary.mode.name,
+                whiteName = summary.whiteName,
+                blackName = summary.blackName,
+                playerColor = summary.playerColor?.name,
+                result = summary.result.protocolString,
+                terminationCode = summary.termination.code,
+                authorityCode = unrecognised?.authorityCode,
+                terminationText = unrecognised?.text,
+                finalFen = summary.finalFen,
+                timeControl = summary.timeControl?.let { "${it.type.name}:${it.initialMs}:${it.incrementMs}" },
+                movesJson = encodeMoves(
+                    summary.moves.map { StoredMove(san = it.san, uci = it.move, fen = it.fen) }
+                ),
+            )
+        }
 
         private fun encodeMoves(moves: List<StoredMove>): String {
             val array = JSONArray()
@@ -127,23 +130,19 @@ interface GameHistoryDao {
     suspend fun delete(gameId: String)
 }
 
-@Database(entities = [GameRecord::class], version = 2, exportSchema = false)
+@Database(entities = [GameRecord::class], version = 3, exportSchema = false)
 abstract class GameHistoryDatabase : RoomDatabase() {
     abstract fun games(): GameHistoryDao
 }
 
-/** The unrecognised half of a termination, wherever it sits. */
-private fun Termination.authorityCode(): String? = when (this) {
-    is Termination.Drawn -> (kind as? DrawKind.Other)?.authorityCode
-    is Termination.Other -> authorityCode
-    else -> null
-}
-
-private fun Termination.text(): String? = when (this) {
-    is Termination.Drawn -> (kind as? DrawKind.Other)?.text
-    is Termination.Other -> text
-    else -> null
-}
+/**
+ * The stored result.
+ *
+ * An unreadable column reads as [GameResult.IN_PROGRESS] - the protocol's `*`, "no result" - which
+ * is what the history screen already shows for one, rather than throwing inside a list row.
+ */
+fun GameRecord.gameResult(): GameResult =
+    GameResult.entries.firstOrNull { it.protocolString == result } ?: GameResult.IN_PROGRESS
 
 /**
  * Rebuilds the termination a record was written from.
@@ -155,18 +154,13 @@ fun GameRecord.termination(): Termination = when (terminationCode) {
     Termination.Checkmate.code -> Termination.Checkmate
     Termination.Stalemate.code -> Termination.Stalemate
     Termination.Resignation.code -> Termination.Resignation
+    Termination.Agreement.code -> Termination.Agreement
     Termination.Timeout.code -> Termination.Timeout
+    Termination.InsufficientMaterial.code -> Termination.InsufficientMaterial
+    Termination.FiftyMoveRule.code -> Termination.FiftyMoveRule
+    Termination.SeventyFiveMoveRule.code -> Termination.SeventyFiveMoveRule
+    Termination.ThreefoldRepetition.code -> Termination.ThreefoldRepetition
+    Termination.FivefoldRepetition.code -> Termination.FivefoldRepetition
     Termination.Aborted.code -> Termination.Aborted
-    "DRAWN" -> Termination.Drawn(drawKind())
     else -> Termination.Other(authorityCode, terminationText)
-}
-
-private fun GameRecord.drawKind(): DrawKind = when (drawKindCode) {
-    DrawKind.Agreement.code -> DrawKind.Agreement
-    DrawKind.InsufficientMaterial.code -> DrawKind.InsufficientMaterial
-    DrawKind.FiftyMoveRule.code -> DrawKind.FiftyMoveRule
-    DrawKind.SeventyFiveMoveRule.code -> DrawKind.SeventyFiveMoveRule
-    DrawKind.ThreefoldRepetition.code -> DrawKind.ThreefoldRepetition
-    DrawKind.FivefoldRepetition.code -> DrawKind.FivefoldRepetition
-    else -> DrawKind.Other(authorityCode, terminationText)
 }

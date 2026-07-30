@@ -16,7 +16,7 @@ import scp.protocol.*
  * The orchestrator drives setup by calling suspending methods on [UIModule]. Each call parks a
  * [CompletableDeferred] here and awaits it; the Compose layer observes the pending request,
  * renders a form, and completes (or cancels) it. Cancelling makes the corresponding
- * `configureXxx` call return [UIError.Cancelled], which unwinds the orchestrator's setup flow.
+ * `configureXxx` call return [UIError.UserCancelled], which unwinds the orchestrator's setup flow.
  */
 data class PendingRequest<I, O>(
     val input: I,
@@ -187,8 +187,19 @@ class AndroidUIModule : UIModule {
     // -- Called by the Compose layer --
 
     suspend fun requestNewGame() = _newGameRequested.emit(Unit)
-    suspend fun signalMoveReady(gameId: String) = _moveReady.emit(MoveReadyEvent(gameId))
-    suspend fun requestResign(gameId: String) = _resignRequested.emit(ResignRequestedEvent(gameId))
+
+    /**
+     * [color] is the player who tapped, which the protocol leaves to the UI because only the UI
+     * knows how the tap was made. See `requesterColor` in `ChessViewModel`, which works it out for
+     * this screen's single set of controls.
+     */
+    suspend fun signalMoveReady(gameId: String, color: Color) =
+        _moveReady.emit(MoveReadyEvent(gameId, color))
+
+    /** [color] is who resigns; see [signalMoveReady]. The orchestrator resigns exactly this side. */
+    suspend fun requestResign(gameId: String, color: Color) =
+        _resignRequested.emit(ResignRequestedEvent(gameId, color))
+
     suspend fun requestDraw(gameId: String) = _drawRequested.emit(DrawRequestedEvent(gameId))
     suspend fun requestAbort(gameId: String) = _abortRequested.emit(AbortRequestedEvent(gameId))
 
@@ -217,7 +228,7 @@ class AndroidUIModule : UIModule {
     /**
      * Parks a request in Compose state and suspends until the UI answers it.
      *
-     * A cancelled deferred surfaces as [UIError.Cancelled], which every caller in the orchestrator
+     * A cancelled deferred surfaces as [UIError.UserCancelled], which every caller in the orchestrator
      * treats as "the user backed out".
      */
     private suspend fun <I, O> awaitAnswer(
@@ -230,7 +241,7 @@ class AndroidUIModule : UIModule {
         return try {
             Result.Success(deferred.await())
         } catch (_: Exception) {
-            Result.Failure(UIError.Cancelled())
+            Result.Failure(UIError.UserCancelled())
         } finally {
             clear()
         }

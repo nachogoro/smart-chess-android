@@ -101,6 +101,11 @@ private fun Termination.toPgnTermination(): String = when (this) {
     Termination.Checkmate,
     Termination.Stalemate,
     Termination.Resignation,
-    is Termination.Drawn -> "normal"
+    Termination.Agreement,
+    Termination.InsufficientMaterial,
+    Termination.FiftyMoveRule,
+    Termination.SeventyFiveMoveRule,
+    Termination.ThreefoldRepetition,
+    Termination.FivefoldRepetition -> "normal"
     is Termination.Other -> "unterminated"
 }

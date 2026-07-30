@@ -33,6 +33,7 @@ import scp.remote.lichess.LichessAdapter
 import scp.orchestrator.GameSession
 import scp.orchestrator.Orchestrator
 import scp.orchestrator.OrchestratorState
+import scp.protocol.Color
 import scp.protocol.EngineAdapterModule
 import scp.protocol.GameMode
 import scp.protocol.RemoteAdapterModule
@@ -240,15 +241,34 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun signalMoveReady() {
         val session = _session.value ?: return
+        val color = requesterColor(session) ?: return
         // Pins what the app believed before the board is read. Paired with the reading that comes
         // back, it is what makes a disagreement between the two legible after the fact.
         Log.i(CHESS_LOG_TAG, "Move ready; expecting one move from ${session.fen}")
-        viewModelScope.launch { uiModule.signalMoveReady(session.gameId) }
+        viewModelScope.launch { uiModule.signalMoveReady(session.gameId, color) }
     }
 
     fun resign() {
-        val gameId = _session.value?.gameId ?: return
-        viewModelScope.launch { uiModule.requestResign(gameId) }
+        val session = _session.value ?: return
+        val color = requesterColor(session) ?: return
+        Log.i(CHESS_LOG_TAG, "Resigning ${session.gameId} on behalf of $color")
+        viewModelScope.launch { uiModule.requestResign(session.gameId, color) }
+    }
+
+    /**
+     * Whose tap the Move Ready and Resign buttons are.
+     *
+     * The screen has one of each, so in a local game - two people at one board and one phone - they
+     * belong to whoever is to move. In an engine or remote game there is only one person here to
+     * tap them. The protocol asks the UI for this because only the UI knows how the tap was made,
+     * and the orchestrator resigns exactly the colour it is given, so this decides who loses.
+     *
+     * Null between turns, when there is nobody to name; the tap is then dropped rather than sent
+     * with a guess.
+     */
+    private fun requesterColor(session: GameSession): Color? = when (session.mode) {
+        GameMode.LOCAL -> (_orchestratorState.value as? OrchestratorState.AwaitingPlayerMove)?.color
+        GameMode.ENGINE, GameMode.REMOTE -> session.playerColor
     }
 
     fun offerDraw() {

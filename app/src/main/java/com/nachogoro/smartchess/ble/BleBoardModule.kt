@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import scp.protocol.BoardCapabilities
 import scp.protocol.BoardCapabilityLevel
 import scp.protocol.BoardError
-import scp.protocol.BoardErrorEvent
 import scp.protocol.BoardModule
 import scp.protocol.BoardState
 import scp.protocol.Color
@@ -27,8 +26,10 @@ class BleBoardModule(
     private val connection: BleBoardConnection,
 ) : BoardModule {
 
-    private val _errors = MutableSharedFlow<BoardErrorEvent>(extraBufferCapacity = 8)
-    override val errors: SharedFlow<BoardErrorEvent> = _errors
+    // The flow carries the errors themselves, so a failure that arrives unprompted says exactly as
+    // much as one returned from a refused call - a sensor failure here names its squares.
+    private val _errors = MutableSharedFlow<BoardError>(extraBufferCapacity = 8)
+    override val errors: SharedFlow<BoardError> = _errors
 
     override suspend fun getCapabilities(): Result<BoardError, BoardCapabilities> {
         // Read from the identified board rather than from a live link. The link is down between
@@ -53,15 +54,17 @@ class BleBoardModule(
             // Worth a line of its own: in simulation mode the board may already have advanced its
             // script before the response went missing, so a failed read is not a no-op.
             Log.w(CHESS_LOG_TAG, "Board read failed: $message")
-            _errors.tryEmit(BoardErrorEvent("DISCONNECTED", diagnostic = message))
-            return Result.Failure(BoardError.Disconnected(diagnostic = message))
+            val error = BoardError.Disconnected(diagnostic = message)
+            _errors.tryEmit(error)
+            return Result.Failure(error)
         }
 
         val readings = when (val parsed = parseBoardState(raw)) {
             is PacketResult.Invalid -> {
                 Log.w(CHESS_LOG_TAG, "Board packet rejected: ${parsed.reason}")
-                _errors.tryEmit(BoardErrorEvent("SENSOR_FAILURE", diagnostic = parsed.reason))
-                return Result.Failure(BoardError.SensorFailure(diagnostic = parsed.reason))
+                val error = BoardError.SensorFailure(diagnostic = parsed.reason)
+                _errors.tryEmit(error)
+                return Result.Failure(error)
             }
 
             is PacketResult.Ok -> parsed.value
@@ -81,8 +84,9 @@ class BleBoardModule(
         val unknown = readings.filterValues { it == SquareReading.UNKNOWN }.keys.sorted()
         if (unknown.isNotEmpty()) {
             Log.w(CHESS_LOG_TAG, "Board reading rejected, unreadable squares: ${unknown.joinToString(", ")}")
-            _errors.tryEmit(BoardErrorEvent("SENSOR_FAILURE", diagnostic = "unreadable squares"))
-            return Result.Failure(BoardError.SensorFailure(unreadableSquares = unknown))
+            val error = BoardError.SensorFailure(unreadableSquares = unknown)
+            _errors.tryEmit(error)
+            return Result.Failure(error)
         }
 
         val squares = readings.mapValues { (_, reading) ->

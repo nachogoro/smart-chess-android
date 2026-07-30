@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nachogoro.smartchess.R
 import com.nachogoro.smartchess.data.GameRecord
+import com.nachogoro.smartchess.data.gameResult
 import com.nachogoro.smartchess.data.toPgn
 import com.nachogoro.smartchess.ui.components.ChessBoardView
 import com.nachogoro.smartchess.ui.describe
@@ -156,7 +157,7 @@ private fun GameRow(game: GameRecord, onClick: () -> Unit) {
                     dateFormat.format(Date(game.playedAt)),
                     game.mode.lowercase(Locale.ROOT),
                     "${game.moves.size} moves",
-                    game.termination().describe(LocalContext.current),
+                    game.termination().describe(LocalContext.current, game.gameResult()),
                 ).joinToString(" - "),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -193,7 +194,7 @@ private fun GameDetail(game: GameRecord, onDelete: () -> Unit, onBack: () -> Uni
         Spacer(Modifier.height(4.dp))
         Text(
             "${dateFormat.format(Date(game.playedAt))} - ${game.mode.lowercase(Locale.ROOT)} - " +
-                "${game.result.ifBlank { "*" }} (${game.termination().describe(LocalContext.current)})",
+                "${game.result.ifBlank { "*" }} (${game.termination().describe(LocalContext.current, game.gameResult())})",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
