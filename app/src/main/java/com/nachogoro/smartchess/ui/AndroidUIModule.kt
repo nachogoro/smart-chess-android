@@ -70,10 +70,6 @@ class AndroidUIModule : UIModule {
     var lastGameSummary by mutableStateOf<GameSummary?>(null)
         private set
 
-    /** Latest position known to the app, used by the optional board viewer. */
-    var currentFen by mutableStateOf<String?>(null)
-        private set
-
     data class PromotionContext(val move: String, val color: Color)
     data class DisambiguationContext(val moves: List<String>, val color: Color)
     data class DesyncInfo(val expectedFen: String, val message: String)
@@ -153,19 +149,16 @@ class AndroidUIModule : UIModule {
 
     override suspend fun onGameStarted(info: GameStartedInfo) {
         isSeeking = false
-        currentFen = info.initialFen
         lastGameSummary = null
         lastGameStartedInfo = info
     }
 
     override suspend fun onGameEnded(summary: GameSummary) {
-        currentFen = summary.finalFen
         lastGameSummary = summary
         _gameEnded.emit(summary)
     }
 
     override suspend fun showOpponentMove(params: ShowOpponentMoveParams): Result<UIError, Unit> {
-        currentFen = params.fen
         lastOpponentMove = params
         _opponentMoved.emit(params)
         return Result.Success(Unit)
@@ -188,11 +181,6 @@ class AndroidUIModule : UIModule {
     suspend fun requestResign(gameId: String) = _resignRequested.emit(ResignRequestedEvent(gameId))
     suspend fun requestDraw(gameId: String) = _drawRequested.emit(DrawRequestedEvent(gameId))
     suspend fun requestAbort(gameId: String) = _abortRequested.emit(AbortRequestedEvent(gameId))
-
-    /** Records the position after a move the app itself made, keeping the viewer in step. */
-    fun updateFen(fen: String) {
-        currentFen = fen
-    }
 
     fun clearError() { lastError = null }
     fun clearDesync() { desyncInfo = null }

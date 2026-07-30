@@ -187,7 +187,9 @@ private fun CenterPanel(
         if (showBoard) {
             Spacer(Modifier.height(12.dp))
             ChessBoardView(
-                fen = uiModule.currentFen ?: STARTING_FEN,
+                // The live session, then the finished game: the orchestrator drops the session
+                // when a game ends, and the final position is worth still being able to check.
+                fen = session?.fen ?: uiModule.lastGameSummary?.finalFen ?: STARTING_FEN,
                 // Show the position from the perspective of whoever owns the phone.
                 flipped = session?.playerColor == ChessColor.BLACK,
                 modifier = Modifier.fillMaxWidth(0.72f),
