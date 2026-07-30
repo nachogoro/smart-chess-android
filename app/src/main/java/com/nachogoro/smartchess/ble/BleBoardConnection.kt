@@ -38,11 +38,13 @@ private const val INITIAL_CONNECT_TIMEOUT_MS = 20_000L
 /**
  * Budget for one attempt at bringing a dropped link back up, and how many attempts to make.
  *
- * The board stops advertising for a while after a client disconnects, and a peripheral that is not
- * advertising cannot be connected to at all. Several short attempts therefore beat one long wait:
- * they pick the board up soon after it becomes reachable, re-issuing the connection rather than
- * sitting on an attempt that may itself be wedged, and they bound what a board that is simply
- * switched off costs the caller.
+ * Reconnecting to a board that is there takes about a second, so these attempts are for the cases
+ * where it is not: they bound what a board that is switched off or out of range costs the caller,
+ * and they re-issue the connection rather than sitting on an attempt that has wedged.
+ *
+ * The board is otherwise always reachable - it advertises continuously, even while a client is
+ * connected, and is visible again within about 30ms of a drop - so a failure here means the board is
+ * genuinely gone rather than briefly unavailable.
  */
 private const val RECONNECT_ATTEMPT_TIMEOUT_MS = 4_000L
 private const val RECONNECT_ATTEMPTS = 3
