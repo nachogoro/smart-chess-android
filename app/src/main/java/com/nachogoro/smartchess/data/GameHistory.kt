@@ -12,7 +12,9 @@ import androidx.room.RoomDatabase
 import kotlinx.coroutines.flow.Flow
 import org.json.JSONArray
 import org.json.JSONObject
+import scp.protocol.DrawKind
 import scp.protocol.GameSummary
+import scp.protocol.Termination
 
 /**
  * One finished game.
@@ -33,7 +35,17 @@ data class GameRecord(
     @ColumnInfo(name = "black_name") val blackName: String?,
     @ColumnInfo(name = "player_color") val playerColor: String?,
     val result: String,
-    val reason: String,
+    /**
+     * How the game ended, kept as codes so a stored game can be re-worded later rather than being
+     * frozen in the language it was played in.
+     *
+     * [authorityCode] and [terminationText] belong to the draw kind when [terminationCode] is
+     * `DRAWN`, and to the termination itself otherwise; only the `OTHER` cases carry them.
+     */
+    val terminationCode: String,
+    val drawKindCode: String? = null,
+    val authorityCode: String? = null,
+    val terminationText: String? = null,
     @ColumnInfo(name = "final_fen") val finalFen: String,
     @ColumnInfo(name = "time_control") val timeControl: String?,
     @ColumnInfo(name = "moves_json") val movesJson: String,
@@ -57,8 +69,11 @@ data class GameRecord(
             whiteName = summary.whiteName,
             blackName = summary.blackName,
             playerColor = summary.playerColor?.name,
-            result = summary.result,
-            reason = summary.reason,
+            result = summary.result.protocolString,
+            terminationCode = summary.termination.code,
+            drawKindCode = (summary.termination as? Termination.Drawn)?.kind?.code,
+            authorityCode = summary.termination.authorityCode(),
+            terminationText = summary.termination.text(),
             finalFen = summary.finalFen,
             timeControl = summary.timeControl?.let { "${it.type.name}:${it.initialMs}:${it.incrementMs}" },
             movesJson = encodeMoves(
@@ -112,7 +127,46 @@ interface GameHistoryDao {
     suspend fun delete(gameId: String)
 }
 
-@Database(entities = [GameRecord::class], version = 1, exportSchema = false)
+@Database(entities = [GameRecord::class], version = 2, exportSchema = false)
 abstract class GameHistoryDatabase : RoomDatabase() {
     abstract fun games(): GameHistoryDao
+}
+
+/** The unrecognised half of a termination, wherever it sits. */
+private fun Termination.authorityCode(): String? = when (this) {
+    is Termination.Drawn -> (kind as? DrawKind.Other)?.authorityCode
+    is Termination.Other -> authorityCode
+    else -> null
+}
+
+private fun Termination.text(): String? = when (this) {
+    is Termination.Drawn -> (kind as? DrawKind.Other)?.text
+    is Termination.Other -> text
+    else -> null
+}
+
+/**
+ * Rebuilds the termination a record was written from.
+ *
+ * A code this build does not recognise becomes `Other`, which is the same thing the protocol asks
+ * a UI to do with one it meets over the wire.
+ */
+fun GameRecord.termination(): Termination = when (terminationCode) {
+    Termination.Checkmate.code -> Termination.Checkmate
+    Termination.Stalemate.code -> Termination.Stalemate
+    Termination.Resignation.code -> Termination.Resignation
+    Termination.Timeout.code -> Termination.Timeout
+    Termination.Aborted.code -> Termination.Aborted
+    "DRAWN" -> Termination.Drawn(drawKind())
+    else -> Termination.Other(authorityCode, terminationText)
+}
+
+private fun GameRecord.drawKind(): DrawKind = when (drawKindCode) {
+    DrawKind.Agreement.code -> DrawKind.Agreement
+    DrawKind.InsufficientMaterial.code -> DrawKind.InsufficientMaterial
+    DrawKind.FiftyMoveRule.code -> DrawKind.FiftyMoveRule
+    DrawKind.SeventyFiveMoveRule.code -> DrawKind.SeventyFiveMoveRule
+    DrawKind.ThreefoldRepetition.code -> DrawKind.ThreefoldRepetition
+    DrawKind.FivefoldRepetition.code -> DrawKind.FivefoldRepetition
+    else -> DrawKind.Other(authorityCode, terminationText)
 }

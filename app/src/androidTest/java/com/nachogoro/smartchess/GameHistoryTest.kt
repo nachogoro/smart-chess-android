@@ -20,7 +20,9 @@ import org.junit.runner.RunWith
 import scp.protocol.Color
 import scp.protocol.GameHistoryMove
 import scp.protocol.GameMode
+import scp.protocol.GameResult
 import scp.protocol.GameSummary
+import scp.protocol.Termination
 import scp.protocol.TimeControl
 import scp.protocol.TimeControlType
 
@@ -56,7 +58,7 @@ class GameHistoryTest {
         assertEquals("Alice", stored.whiteName)
         assertEquals("Bob", stored.blackName)
         assertEquals("1-0", stored.result)
-        assertEquals("checkmate", stored.reason)
+        assertEquals(Termination.Checkmate.code, stored.terminationCode)
         assertEquals(GameMode.LOCAL.name, stored.mode)
         // The move list survives the round trip through its JSON column, in order and complete.
         assertEquals(listOf("e4", "e5", "Qh5", "Nc6", "Bc4", "Nf6", "Qxf7#"), stored.moves.map { it.san })
@@ -192,8 +194,8 @@ class GameHistoryTest {
             blackName = "Bob",
             playerColor = Color.WHITE,
             timeControl = TimeControl(TimeControlType.FISCHER, initialMs = 900_000, incrementMs = 10_000),
-            result = "1-0",
-            reason = "checkmate",
+            result = GameResult.WHITE_WINS,
+            termination = Termination.Checkmate,
             finalFen = "r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4",
             moves = moves,
         )

@@ -1,5 +1,6 @@
 package com.nachogoro.smartchess.data
 
+import com.nachogoro.smartchess.ui.describe
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -24,7 +25,7 @@ fun GameRecord.toPgn(): String {
 
         // Optional tags, only when they carry something.
         timeControl?.let { add("TimeControl" to it.toPgnTimeControl()) }
-        if (reason.isNotBlank()) add("Termination" to reason)
+        add("Termination" to termination().describe())
     }
 
     val header = tags.joinToString("\n") { (name, value) ->

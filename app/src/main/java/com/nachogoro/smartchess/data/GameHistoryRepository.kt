@@ -19,6 +19,9 @@ class GameHistoryRepository(context: Context) {
             GameHistoryDatabase::class.java,
             DATABASE_NAME,
         )
+        // Pre-release: a schema change drops the saved games rather than carrying a migration for
+        // history nobody depends on yet.
+        .fallbackToDestructiveMigration(dropAllTables = true)
         .build()
 
     private val dao = database.games()

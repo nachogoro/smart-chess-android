@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nachogoro.smartchess.ui.AndroidUIModule
+import com.nachogoro.smartchess.ui.describe
 import com.nachogoro.smartchess.ui.components.BoardPiece
 import com.nachogoro.smartchess.ui.components.ChessBoardView
 import com.nachogoro.smartchess.ui.components.PieceTile
@@ -434,9 +435,9 @@ private fun GameDialogs(uiModule: AndroidUIModule, onGameEnd: () -> Unit) {
             title = { Text("Game over") },
             text = {
                 Column {
-                    Text(summary.result, style = MaterialTheme.typography.headlineSmall)
+                    Text(summary.result.protocolString, style = MaterialTheme.typography.headlineSmall)
                     Spacer(Modifier.height(8.dp))
-                    Text(summary.reason, style = MaterialTheme.typography.bodyMedium)
+                    Text(summary.termination.describe(), style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "${summary.moves.size} moves played",

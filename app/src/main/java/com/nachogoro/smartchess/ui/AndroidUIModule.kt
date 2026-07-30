@@ -157,7 +157,7 @@ class AndroidUIModule : UIModule {
     }
 
     override suspend fun onGameEnded(summary: GameSummary) {
-        Log.i(CHESS_LOG_TAG, "Game ended ${summary.result} (${summary.reason})")
+        Log.i(CHESS_LOG_TAG, "Game ended ${summary.result.protocolString} (${summary.termination.code})")
         lastGameSummary = summary
         _gameEnded.emit(summary)
     }
