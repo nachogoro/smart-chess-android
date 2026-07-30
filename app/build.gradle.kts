@@ -94,6 +94,10 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
+    // --- Local tests (no device: these cover logic that touches neither Android nor the native
+    //     library, such as turning a move into the sentence that is read out loud) ---
+    testImplementation("junit:junit:4.13.2")
+
     // --- Instrumented tests (they must run on a device: the point is the native library) ---
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")

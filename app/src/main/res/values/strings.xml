@@ -1,4 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Smart Chess</string>
+
+    <!--
+      Spoken announcement of the opponent's move.
+
+      These are the one part of the app whose wording must be a resource rather than a literal:
+      they are read out loud, so the voice has to be set to the language they are written in.
+      announce_locale is that language, and it belongs beside them - the system language is not a
+      reliable answer, because a locale the app has no translation for falls back to these
+      defaults and would then be read aloud with the wrong pronunciation.
+
+      Placeholders are positional so a translation can reorder them.
+    -->
+    <string name="announce_locale" translatable="false">en</string>
+
+    <!-- Piece, destination square. -->
+    <string name="announce_move">%1$s to %2$s</string>
+    <!-- Piece, origin square, destination square. Used when the move needs disambiguating. -->
+    <string name="announce_move_from">%1$s on %2$s to %3$s</string>
+    <!-- Piece, destination square. -->
+    <string name="announce_capture">%1$s captures on %2$s</string>
+    <!-- Piece, origin square, destination square. -->
+    <string name="announce_capture_from">%1$s on %2$s captures on %3$s</string>
+    <string name="announce_castle_kingside">Castles kingside</string>
+    <string name="announce_castle_queenside">Castles queenside</string>
+    <!-- The move announced so far. Warns that a pawn leaves the board from an unnamed square. -->
+    <string name="announce_en_passant">%1$s, en passant</string>
+    <!-- The move announced so far, the piece promoted to. -->
+    <string name="announce_promotion">%1$s, promoting to a %2$s</string>
+    <!-- The move announced so far. -->
+    <string name="announce_check">%1$s, check</string>
+    <!-- The move announced so far. -->
+    <string name="announce_checkmate">%1$s, checkmate</string>
+
+    <string name="piece_pawn">Pawn</string>
+    <string name="piece_knight">Knight</string>
+    <string name="piece_bishop">Bishop</string>
+    <string name="piece_rook">Rook</string>
+    <string name="piece_queen">Queen</string>
+    <string name="piece_king">King</string>
 </resources>

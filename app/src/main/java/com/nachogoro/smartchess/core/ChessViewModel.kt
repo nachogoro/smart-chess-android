@@ -10,6 +10,7 @@ import com.nachogoro.smartchess.data.AppSettings
 import com.nachogoro.smartchess.data.GameHistoryRepository
 import com.nachogoro.smartchess.data.GameRecord
 import com.nachogoro.smartchess.data.SettingsRepository
+import com.nachogoro.smartchess.speech.MoveSpeaker
 import com.nachogoro.smartchess.ui.AndroidUIModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -94,6 +95,8 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
     val settings: StateFlow<AppSettings> = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())
 
+    private val speaker = MoveSpeaker(application)
+
     val connectionState: StateFlow<BoardConnectionState> = connection.state
 
     private val _screen = MutableStateFlow(Screen.CONNECTION)
@@ -127,6 +130,12 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
         // Re-recording the same game is harmless: records are keyed by game id and replaced.
         viewModelScope.launch {
             uiModule.gameEnded.collect { historyRepository.record(it) }
+        }
+
+        // Announced from here rather than from the game screen: the move is spoken because it
+        // happened, not because something is on screen to show it.
+        viewModelScope.launch {
+            uiModule.opponentMoved.collect { move -> speaker.announce(move) }
         }
 
         viewModelScope.launch {
@@ -261,6 +270,7 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
         connection.close()
         orchestrator.stop()
         moduleScope.cancel()
+        speaker.shutdown()
     }
 
     private companion object {

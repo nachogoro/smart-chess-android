@@ -91,6 +91,17 @@ class AndroidUIModule : UIModule {
     private val _gameEnded = MutableSharedFlow<GameSummary>(replay = 1)
     val gameEnded: SharedFlow<GameSummary> = _gameEnded
 
+    /**
+     * Opponent moves, for consumers that act on the move rather than display it.
+     *
+     * [lastOpponentMove] is the state the screen renders and stands until it is cleared, which is
+     * the wrong shape for spoken announcements: those must happen once, when the move arrives, and
+     * not again because something recomposed. No replay, for the same reason - a collector that
+     * subscribes later has missed a move the player has long since played.
+     */
+    private val _opponentMoved = MutableSharedFlow<ShowOpponentMoveParams>(extraBufferCapacity = 4)
+    val opponentMoved: SharedFlow<ShowOpponentMoveParams> = _opponentMoved
+
     private val _newGameRequested = MutableSharedFlow<Unit>(replay = 1)
     private val _moveReady = MutableSharedFlow<MoveReadyEvent>(extraBufferCapacity = 4)
     private val _resignRequested = MutableSharedFlow<ResignRequestedEvent>(extraBufferCapacity = 4)
@@ -156,6 +167,7 @@ class AndroidUIModule : UIModule {
     override suspend fun showOpponentMove(params: ShowOpponentMoveParams): Result<UIError, Unit> {
         currentFen = params.fen
         lastOpponentMove = params
+        _opponentMoved.emit(params)
         return Result.Success(Unit)
     }
 
