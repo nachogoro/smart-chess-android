@@ -337,7 +337,7 @@ private fun NotificationArea(uiModule: AndroidUIModule) {
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
                 Text(
-                    desync.message,
+                    desync.message.describe(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
@@ -356,7 +356,7 @@ private fun NotificationArea(uiModule: AndroidUIModule) {
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
-                    error,
+                    error.describe(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )

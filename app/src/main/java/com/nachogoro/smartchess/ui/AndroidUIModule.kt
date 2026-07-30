@@ -61,7 +61,7 @@ class AndroidUIModule : UIModule {
 
     var lastOpponentMove by mutableStateOf<ShowOpponentMoveParams?>(null)
         private set
-    var lastError by mutableStateOf<String?>(null)
+    var lastError by mutableStateOf<UIMessage?>(null)
         private set
     var desyncInfo by mutableStateOf<DesyncInfo?>(null)
         private set
@@ -74,7 +74,7 @@ class AndroidUIModule : UIModule {
 
     data class PromotionContext(val move: String, val color: Color)
     data class DisambiguationContext(val moves: List<String>, val color: Color)
-    data class DesyncInfo(val expectedFen: String, val message: String)
+    data class DesyncInfo(val expectedFen: String, val message: UIMessage)
 
     // -- Events emitted by the UI --
 
@@ -169,17 +169,17 @@ class AndroidUIModule : UIModule {
         return Result.Success(Unit)
     }
 
-    override suspend fun displayError(message: String): Result<UIError, Unit> {
-        Log.i(CHESS_LOG_TAG, "Reported to the player: $message")
+    override suspend fun displayError(message: UIMessage): Result<UIError, Unit> {
+        Log.i(CHESS_LOG_TAG, "Reported to the player: ${message.code}")
         lastError = message
         return Result.Success(Unit)
     }
 
-    override suspend fun boardDesync(expectedFen: String, message: String): Result<UIError, Unit> {
+    override suspend fun boardDesync(expectedFen: String, message: UIMessage): Result<UIError, Unit> {
         // The expected position is the other half of a desync and appears nowhere on screen, so
         // without it here the reading the board sent cannot be told apart from the one it should
         // have sent.
-        Log.w(CHESS_LOG_TAG, "Desync: $message; expected $expectedFen")
+        Log.w(CHESS_LOG_TAG, "Desync: ${message.code}; expected $expectedFen")
         desyncInfo = DesyncInfo(expectedFen, message)
         return Result.Success(Unit)
     }
