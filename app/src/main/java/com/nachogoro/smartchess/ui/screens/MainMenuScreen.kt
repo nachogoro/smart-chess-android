@@ -21,7 +21,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.nachogoro.smartchess.R
 import com.nachogoro.smartchess.ble.BoardConnectionState
 import scp.protocol.GameMode
 
@@ -50,7 +52,7 @@ fun MainMenuScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("Smart Chess", style = MaterialTheme.typography.headlineLarge)
+        Text(stringResource(R.string.menu_title), style = MaterialTheme.typography.headlineLarge)
 
         Spacer(Modifier.height(8.dp))
         BoardStatusChip(connectionState, onReconnect)
@@ -70,7 +72,7 @@ fun MainMenuScreen(
 
         if (!boardReady) {
             Text(
-                "Connect your board to start a game.",
+                stringResource(R.string.menu_connect_prompt),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -79,11 +81,11 @@ fun MainMenuScreen(
         Spacer(Modifier.height(20.dp))
 
         OutlinedButton(onClick = onHistory, modifier = Modifier.fillMaxWidth().height(48.dp)) {
-            Text("Games history")
+            Text(stringResource(R.string.menu_history))
         }
         Spacer(Modifier.height(12.dp))
         OutlinedButton(onClick = onSettings, modifier = Modifier.fillMaxWidth().height(48.dp)) {
-            Text("Settings")
+            Text(stringResource(R.string.menu_settings))
         }
     }
 }
@@ -103,22 +105,23 @@ private fun BoardStatusChip(state: BoardConnectionState, onReconnect: () -> Unit
         Spacer(Modifier.width(6.dp))
         Text(
             text = when (state) {
-                is BoardConnectionState.Identified -> state.deviceName ?: "Board connected"
-                is BoardConnectionState.Failed -> "Board disconnected"
-                else -> "No board"
+                is BoardConnectionState.Identified -> state.deviceName ?: stringResource(R.string.menu_board_connected)
+                is BoardConnectionState.Failed -> stringResource(R.string.menu_board_disconnected)
+                else -> stringResource(R.string.menu_no_board)
             },
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (!connected) {
             Spacer(Modifier.width(8.dp))
-            OutlinedButton(onClick = onReconnect) { Text("Reconnect") }
+            OutlinedButton(onClick = onReconnect) { Text(stringResource(R.string.menu_reconnect)) }
         }
     }
 }
 
+@Composable
 private fun GameMode.menuLabel(): String = when (this) {
-    GameMode.LOCAL -> "Play a local player"
-    GameMode.ENGINE -> "Play an engine"
-    GameMode.REMOTE -> "Play remotely"
+    GameMode.LOCAL -> stringResource(R.string.menu_play_local)
+    GameMode.ENGINE -> stringResource(R.string.menu_play_engine)
+    GameMode.REMOTE -> stringResource(R.string.menu_play_remote)
 }

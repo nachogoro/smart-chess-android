@@ -91,4 +91,35 @@
     <string name="msg_unreadable_squares">Could not read squares %1$s. Re-seat the pieces and try again.</string>
     <!-- How many squares in total, then the first few. -->
     <string name="msg_unreadable_squares_truncated">Could not read %1$d squares, including %2$s. Re-seat the pieces and try again.</string>
+
+    <!-- Main menu -->
+    <string name="menu_title">Smart Chess</string>
+    <string name="menu_connect_prompt">Connect your board to start a game.</string>
+    <string name="menu_history">Games history</string>
+    <string name="menu_settings">Settings</string>
+    <string name="menu_board_connected">Board connected</string>
+    <string name="menu_board_disconnected">Board disconnected</string>
+    <string name="menu_no_board">No board</string>
+    <string name="menu_reconnect">Reconnect</string>
+    <string name="menu_play_local">Play a local player</string>
+    <string name="menu_play_engine">Play an engine</string>
+    <string name="menu_play_remote">Play remotely</string>
+
+    <!-- Connection screen -->
+    <string name="connect_title">Connect your board</string>
+    <string name="connect_searching">Looking for your board. Make sure it is switched on and close by.</string>
+    <!-- The board\'s advertised name, or connect_the_board when it has none. -->
+    <string name="connect_connecting">Connecting to %1$s\u2026</string>
+    <string name="connect_connected">Connected to %1$s.</string>
+    <string name="connect_the_board">the board</string>
+    <string name="connect_needs_permission">Smart Chess needs Bluetooth permission to find your board. It never uses your location.</string>
+    <string name="connect_bluetooth_off">Bluetooth is switched off. Turn it on to reach the board.</string>
+    <string name="connect_needs_location">On this version of Android, location services must be on for Bluetooth scanning to return results. Smart Chess does not read your location.</string>
+    <string name="connect_ready">Ready to search for your board.</string>
+    <string name="connect_grant_permission">Grant Bluetooth permission</string>
+    <string name="connect_turn_on_bluetooth">Turn on Bluetooth</string>
+    <string name="connect_open_location_settings">Open location settings</string>
+    <string name="connect_try_again">Try again</string>
+    <string name="connect_find_board">Find my board</string>
+    <string name="connect_continue_without">Continue without a board</string>
 </resources>

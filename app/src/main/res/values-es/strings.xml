@@ -83,4 +83,35 @@
     <string name="msg_unreadable_squares">No se han podido leer las casillas %1$s. Recoloca las piezas y vuelve a intentarlo.</string>
     <!-- Cuántas casillas en total, y luego las primeras. -->
     <string name="msg_unreadable_squares_truncated">No se han podido leer %1$d casillas, entre ellas %2$s. Recoloca las piezas y vuelve a intentarlo.</string>
+
+    <!-- Menú principal -->
+    <string name="menu_title">Smart Chess</string>
+    <string name="menu_connect_prompt">Conecta tu tablero para empezar una partida.</string>
+    <string name="menu_history">Historial de partidas</string>
+    <string name="menu_settings">Ajustes</string>
+    <string name="menu_board_connected">Tablero conectado</string>
+    <string name="menu_board_disconnected">Tablero desconectado</string>
+    <string name="menu_no_board">Sin tablero</string>
+    <string name="menu_reconnect">Reconectar</string>
+    <string name="menu_play_local">Jugar contra alguien aquí</string>
+    <string name="menu_play_engine">Jugar contra un motor</string>
+    <string name="menu_play_remote">Jugar en línea</string>
+
+    <!-- Pantalla de conexión -->
+    <string name="connect_title">Conecta tu tablero</string>
+    <string name="connect_searching">Buscando tu tablero. Asegúrate de que está encendido y cerca.</string>
+    <!-- El nombre que anuncia el tablero, o connect_the_board si no tiene. -->
+    <string name="connect_connecting">Conectando con %1$s\u2026</string>
+    <string name="connect_connected">Conectado a %1$s.</string>
+    <string name="connect_the_board">el tablero</string>
+    <string name="connect_needs_permission">Smart Chess necesita permiso de Bluetooth para encontrar tu tablero. Nunca usa tu ubicación.</string>
+    <string name="connect_bluetooth_off">El Bluetooth está apagado. Enciéndelo para llegar al tablero.</string>
+    <string name="connect_needs_location">En esta versión de Android, la ubicación debe estar activada para que la búsqueda por Bluetooth dé resultados. Smart Chess no lee tu ubicación.</string>
+    <string name="connect_ready">Listo para buscar tu tablero.</string>
+    <string name="connect_grant_permission">Conceder permiso de Bluetooth</string>
+    <string name="connect_turn_on_bluetooth">Encender el Bluetooth</string>
+    <string name="connect_open_location_settings">Abrir ajustes de ubicación</string>
+    <string name="connect_try_again">Reintentar</string>
+    <string name="connect_find_board">Buscar mi tablero</string>
+    <string name="connect_continue_without">Continuar sin tablero</string>
 </resources>

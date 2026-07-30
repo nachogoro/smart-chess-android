@@ -31,9 +31,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.nachogoro.smartchess.R
 import com.nachogoro.smartchess.ble.BlePermissions
 import com.nachogoro.smartchess.ble.BoardConnectionState
 
@@ -111,7 +113,7 @@ fun ConnectionScreen(
         Spacer(Modifier.height(24.dp))
 
         Text(
-            text = "Connect your board",
+            text = stringResource(R.string.connect_title),
             style = MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center,
         )
@@ -120,27 +122,26 @@ fun ConnectionScreen(
 
         val message = when {
             isConnecting || state is BoardConnectionState.Scanning ->
-                "Looking for your board. Make sure it is switched on and close by."
+                stringResource(R.string.connect_searching)
 
             state is BoardConnectionState.Connecting ->
-                "Connecting to ${state.deviceName ?: "the board"}..."
+                stringResource(R.string.connect_connecting, state.deviceName ?: stringResource(R.string.connect_the_board))
 
             state is BoardConnectionState.Identified ->
-                "Connected to ${state.deviceName ?: "the board"}."
+                stringResource(R.string.connect_connected, state.deviceName ?: stringResource(R.string.connect_the_board))
 
             !permissionsGranted ->
-                "Smart Chess needs Bluetooth permission to find your board. It never uses your location."
+                stringResource(R.string.connect_needs_permission)
 
             !bluetoothEnabled ->
-                "Bluetooth is switched off. Turn it on to reach the board."
+                stringResource(R.string.connect_bluetooth_off)
 
             !locationEnabled ->
-                "On this version of Android, location services must be on for Bluetooth scanning to " +
-                    "return results. Smart Chess does not read your location."
+                stringResource(R.string.connect_needs_location)
 
             state is BoardConnectionState.Failed -> state.reason
 
-            else -> "Ready to search for your board."
+            else -> stringResource(R.string.connect_ready)
         }
 
         Text(
@@ -159,27 +160,30 @@ fun ConnectionScreen(
                 !permissionsGranted -> Button(
                     onClick = { permissionLauncher.launch(BlePermissions.required.toTypedArray()) },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Grant Bluetooth permission") }
+                ) { Text(stringResource(R.string.connect_grant_permission)) }
 
                 !bluetoothEnabled -> Button(
                     onClick = {
                         enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
                     },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Turn on Bluetooth") }
+                ) { Text(stringResource(R.string.connect_turn_on_bluetooth)) }
 
                 !locationEnabled -> Button(
                     onClick = {
                         enableBluetoothLauncher.launch(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
                     },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Open location settings") }
+                ) { Text(stringResource(R.string.connect_open_location_settings)) }
 
                 else -> Button(
                     onClick = onConnect,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (state is BoardConnectionState.Failed) "Try again" else "Find my board")
+                    Text(
+                        if (state is BoardConnectionState.Failed) stringResource(R.string.connect_try_again)
+                        else stringResource(R.string.connect_find_board)
+                    )
                 }
             }
         }
@@ -188,7 +192,7 @@ fun ConnectionScreen(
 
         // Past games are readable without hardware, so never make the board a hard gate.
         TextButton(onClick = onContinueWithoutBoard, modifier = Modifier.fillMaxWidth()) {
-            Text("Continue without a board")
+            Text(stringResource(R.string.connect_continue_without))
         }
     }
 }
