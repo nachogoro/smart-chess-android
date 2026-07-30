@@ -65,7 +65,7 @@ import scp.protocol.PromotionPiece
  *
  * The physical board is the input device: the player moves the pieces and then taps the screen to
  * say "done", exactly like pressing a chess clock. The app then reads the board over BLE and works
- * out what was played. Consequently this screen shows no interactive board - only clocks, whose
+ * out what was played. Consequently this screen shows no interactive board, only clocks, whose
  * turn it is, and an opt-in view of the position for when a player wants to check they are in sync.
  */
 @Composable
@@ -238,7 +238,7 @@ private fun CenterPanel(
  * One player's clock.
  *
  * [timeMs] is the snapshot from the last move. The displayed value resets to it whenever new clock
- * values arrive, ticks down only while this side is active, and otherwise holds — including gaining
+ * values arrive, ticks down only while this side is active, and otherwise holds, including gaining
  * [incrementMs] when this side completes a move.
  *
  * This matters for remote games: the server is the clock authority and reports the times only on

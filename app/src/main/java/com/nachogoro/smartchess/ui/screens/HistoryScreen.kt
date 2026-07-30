@@ -60,7 +60,7 @@ import java.util.Locale
  * Past games: a list, and a replay for whichever is selected.
  *
  * Every stored move carries the position that followed it, so stepping through a game is a matter
- * of indexing into that list - replaying involves no rules engine at all.
+ * of indexing into that list; replaying involves no rules engine at all.
  */
 @Composable
 fun HistoryScreen(

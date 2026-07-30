@@ -25,7 +25,7 @@ import scp.remote.lichess.LichessHttpApi
  * rewritten from the JDK's `HttpClient` to OkHttp precisely because the former does not exist on
  * Android below API 34, and that rewrite had never actually executed on Android.
  *
- * The riskiest part is the NDJSON streaming used for the event and game streams - a long-lived
+ * The riskiest part is the NDJSON streaming used for the event and game streams: a long-lived
  * connection read line by line, with no read timeout, cancelled by cancelling the call. A mock
  * server stands in for Lichess so none of this needs an account or a token.
  */

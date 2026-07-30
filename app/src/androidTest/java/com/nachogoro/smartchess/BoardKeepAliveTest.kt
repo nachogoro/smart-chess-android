@@ -19,7 +19,7 @@ private const val TAG = "BoardKeepAlive"
  * Decides whether traffic can hold the link open, or whether it dies a fixed time after it opens.
  *
  * Every earlier measurement put its read at the start of the connection, so "about 30s after the
- * last operation" and "about 30s after connecting" fit the data equally well - and they imply
+ * last operation" and "about 30s after connecting" fit the data equally well, and they imply
  * opposite things about whether a keep-alive is worth having. This reads at a shorter cadence than
  * the observed lifetime: if the link still dies on schedule, traffic does not extend it.
  *

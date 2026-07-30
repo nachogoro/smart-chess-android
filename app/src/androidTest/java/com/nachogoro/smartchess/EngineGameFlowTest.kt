@@ -43,13 +43,13 @@ import scp.protocol.SquareState
  * Plays a real game against Carballo through the actual orchestrator, on a device.
  *
  * The unit-level engine test proves Carballo can produce a move; this proves the whole engine mode
- * hangs together - mode selection, the configuration handshake, game creation, move inference from
+ * hangs together: mode selection, the configuration handshake, game creation, move inference from
  * a board reading, and the engine's reply coming back to the UI module.
  *
  * The physical board is the one part that cannot participate: it speaks BLE, which no emulator
  * provides. It is replaced here by a fake reporting whatever position the test sets. Everything
- * above it - orchestrator, game controller, native rules engine, engine adapter, and the app's own
- * UI module - is the production code path.
+ * above it (orchestrator, game controller, native rules engine, engine adapter, and the app's own
+ * UI module) is the production code path.
  */
 @RunWith(AndroidJUnit4::class)
 class EngineGameFlowTest {
@@ -122,8 +122,8 @@ class EngineGameFlowTest {
 
     @Test
     fun asksWhichEngineToPlayWhenMoreThanOneIsRegistered() = runBlocking {
-        // With a single engine the orchestrator picks it silently, so this prompt - and the picker
-        // that answers it - only became reachable when a second engine was added.
+        // With a single engine the orchestrator picks it silently, so reaching this prompt, and
+        // the picker that answers it, takes a second engine.
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val ui = AndroidUIModule()
         val board = FakeBoard(STARTING_FEN)

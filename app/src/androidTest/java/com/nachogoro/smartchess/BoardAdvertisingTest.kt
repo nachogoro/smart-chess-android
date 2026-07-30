@@ -25,7 +25,7 @@ private const val TAG = "BoardAdv"
  * Measures how soon the board can be reached again after the link drops.
  *
  * A reconnect needs the board in connectable advertising - BLE has no way to reach a peripheral
- * that is not advertising - so this delay is what bounds how long a move takes to register when the
+ * that is not advertising, so this delay is what bounds how long a move takes to register when the
  * player happens to tap shortly after the idle teardown. It also settles whether the board
  * advertises while a client is connected.
  *

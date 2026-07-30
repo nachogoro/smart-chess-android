@@ -7,7 +7,7 @@ import java.util.UUID
  *
  * The board is a passive sensor: it reports the observed state of the 64 squares and nothing
  * else. It does not know the rules, does not validate moves, and does not distinguish piece
- * types - only colour. All game logic lives in this app.
+ * types, only colour. All game logic lives in this app.
  *
  * See `GUIA_APP_MOVIL_BLE_CHESSBOARD_V1-0-0_ES.md` for the normative description.
  */

@@ -152,7 +152,7 @@ fun GameSetupScreen(
 
             pendingPlatform != null -> PlatformPicker(
                 platforms = pendingPlatform.input,
-                // The id, not the name - see the engine picker.
+                // The id, not the name. See the engine picker.
                 onSelect = { pendingPlatform.complete(it.id) },
                 onCancel = {
                     pendingPlatform.cancel()
@@ -396,7 +396,7 @@ private fun EngineGameForm(
  *
  * Two independent parameter sets arrive from the adapter: connection settings (a Lichess API token
  * and the like) and seek settings (time control, rated or casual, which colour). They are rendered
- * and persisted separately because they have different lifetimes - the token is entered once and
+ * and persisted separately because they have different lifetimes: the token is entered once and
  * kept, while the seek is a per-game choice that merely defaults to last time's.
  */
 @Composable

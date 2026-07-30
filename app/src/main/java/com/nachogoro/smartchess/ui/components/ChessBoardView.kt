@@ -31,8 +31,8 @@ data class BoardPiece(val type: PieceType, val color: ChessColor)
  * Read-only board rendered from a FEN string.
  *
  * This exists purely so a player can confirm that the physical board matches what the app thinks
- * the position is. It is never the input surface - moves are always made on the real board - so it
- * has no interaction and is shown only when the player asks for it.
+ * the position is. It is never the input surface, since moves are always made on the real board,
+ * so it has no interaction and is shown only when the player asks for it.
  */
 @Composable
 fun ChessBoardView(

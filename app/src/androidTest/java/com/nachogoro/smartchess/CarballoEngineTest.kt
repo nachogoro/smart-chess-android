@@ -44,7 +44,7 @@ class CarballoEngineTest {
         assertTrue(engine.newGame() is Result.Success)
 
         // The orchestrator asks for a move with no time or depth limit, so this is the same
-        // fixed-depth search a real game performs - and therefore a fair measure of how long a
+        // fixed-depth search a real game performs, and therefore a fair measure of how long a
         // phone takes to answer.
         val result = withTimeout(ENGINE_MOVE_TIMEOUT_MS) {
             engine.getBestMove(GetBestMoveParams(fen = STARTING_FEN))

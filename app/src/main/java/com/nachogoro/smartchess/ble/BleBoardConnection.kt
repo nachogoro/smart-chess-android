@@ -42,8 +42,8 @@ private const val INITIAL_CONNECT_TIMEOUT_MS = 20_000L
  * where it is not: they bound what a board that is switched off or out of range costs the caller,
  * and they re-issue the connection rather than sitting on an attempt that has wedged.
  *
- * The board is otherwise always reachable - it advertises continuously, even while a client is
- * connected, and is visible again within about 30ms of a drop - so a failure here means the board is
+ * The board is otherwise always reachable: it advertises continuously, even while a client is
+ * connected, and is visible again within about 30ms of a drop. A failure here means the board is
  * genuinely gone rather than briefly unavailable.
  */
 private const val RECONNECT_ATTEMPT_TIMEOUT_MS = 4_000L
@@ -472,7 +472,7 @@ class BleBoardConnection(context: Context) {
                         // Android hangs up 30s after the link opens whatever the traffic: the HCI
                         // trace shows an explicit host Disconnect, not a supervision timeout, and
                         // reads every 8s do not postpone it. A game reads the board minutes apart,
-                        // so a dropped link is the resting state rather than a fault - the next
+                        // so a dropped link is the resting state rather than a fault: the next
                         // read reconnects.
                         _state.value = if (device != null && caps != null) {
                             BoardConnectionState.Disconnected(knownDeviceName, caps)

@@ -17,20 +17,20 @@ import org.junit.runner.RunWith
  * proves the cleanup path *runs*. `NativeCleaner` replaced `java.lang.ref.Cleaner` with a
  * `PhantomReference` + `ReferenceQueue` mechanism, and reference-queue processing is a runtime
  * behaviour of the garbage collector, so it must be verified on ART, not only on the desktop JVM
- * where the unit tests run. A cleaner that silently never fired would not crash — it would leak
+ * where the unit tests run. A cleaner that silently never fired would not crash; it would leak
  * native memory until a long session ran out.
  *
  * ## Why a churn, not a hold-then-drop
  *
- * The obvious test — hold a batch of games, drop them, and watch native memory fall — does not work
- * reliably on ART. Reclamation is only triggered by garbage collection, and an explicit
- * `System.gc()` under no memory pressure (in a debuggable instrumentation process) is a hint ART is
- * free to ignore, so the dropped games are often never collected and nothing is freed. That is a
- * property of the test, not the library.
+ * The obvious test, holding a batch of games, dropping them and watching native memory fall,
+ * does not work reliably on ART. Reclamation is only triggered by garbage collection, and an
+ * explicit `System.gc()` under no memory pressure (in a debuggable instrumentation process) is a
+ * hint ART is free to ignore, so the dropped games are often never collected and nothing is
+ * freed. That is a property of the test, not the library.
  *
  * Churning many short-lived games instead lets real collections happen, which enqueue the phantom
  * references, which the cleaner drains. But a bare `Game.newGame()` allocates almost nothing on the
- * *JVM* heap, so on its own it never pressures ART into collecting the dead games — so each cycle
+ * *JVM* heap, so on its own it never pressures ART into collecting the dead games. Each cycle
  * also allocates a throwaway buffer, standing in for the ordinary Java-side allocation that real
  * gameplay (move generation, coroutines, UI) produces and that drives collection in the running app.
  *
@@ -40,7 +40,7 @@ import org.junit.runner.RunWith
  * per-game size times the churn count.
  *
  * The test runs against the sibling `simple-chess-kotlin` project via the build-wide dependency
- * substitution — i.e. exactly the code that would be published.
+ * substitution, i.e. exactly the code that would be published.
  */
 @RunWith(AndroidJUnit4::class)
 class NativeCleanupTest {
@@ -73,7 +73,7 @@ class NativeCleanupTest {
         forceCollection()
 
         val growth = nativeHeapBytes() - baseline
-        // A dead cleaner would leak about CHURN * per-game bytes here — tens of megabytes. A working
+        // A dead cleaner would leak about CHURN * per-game bytes here, tens of megabytes. A working
         // one keeps the in-use native heap to a few in-flight games' worth. The ceiling sits far
         // below the leak case and comfortably above steady-state wobble.
         assertTrue(

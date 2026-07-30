@@ -17,7 +17,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
  * Persisted user settings.
  *
  * [moduleSettings] holds one saved form per engine or remote platform, keyed by module name, so
- * that values the user has already supplied - an API token, a difficulty level - are pre-filled
+ * that values the user has already supplied (an API token, a difficulty level) are pre-filled
  * the next time they start a game with that module instead of being retyped.
  */
 data class AppSettings(

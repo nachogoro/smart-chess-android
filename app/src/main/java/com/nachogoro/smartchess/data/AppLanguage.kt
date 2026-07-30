@@ -6,8 +6,8 @@ import androidx.core.os.LocaleListCompat
 /**
  * The language the app is shown in.
  *
- * Deliberately not part of [AppSettings]. AppCompat already stores this - in the framework on
- * API 33 and later, and in its own preferences below that - and a second copy in DataStore could
+ * Deliberately not part of [AppSettings]. AppCompat already stores this (in the framework on
+ * API 33 and later, and in its own preferences below that) and a second copy in DataStore could
  * only ever disagree with the one that actually decides which resources load. Reading it back from
  * AppCompat means the in-app picker and Android 13's own per-app language screen are the same
  * setting rather than two.

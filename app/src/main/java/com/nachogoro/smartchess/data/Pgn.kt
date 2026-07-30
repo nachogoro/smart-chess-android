@@ -68,7 +68,7 @@ private fun GameRecord.movetext(): String {
  * Converts the stored `TYPE:initialMs:incrementMs` triple into PGN's `seconds+increment`.
  *
  * PGN has no way to express Bronstein or simple delay in this tag, so they are written as if they
- * were Fischer increment - the initial time and increment are still correct, which is what a reader
+ * were Fischer increment: the initial time and increment are still correct, which is what a reader
  * uses the tag for.
  */
 private fun String.toPgnTimeControl(): String {
@@ -91,7 +91,7 @@ private val PGN_DATE_FORMAT = SimpleDateFormat("yyyy.MM.dd", Locale.ROOT)
  * the format says it says, in the format's language, whatever the app is set to. That the two
  * happen to be English today is a coincidence worth not relying on.
  *
- * The standard's values are coarser than ours - checkmate, resignation and a draw are all a game
+ * The standard's values are coarser than ours: checkmate, resignation and a draw are all a game
  * that ended "normal" - but the detail is recoverable from the moves and the result, which is
  * presumably why it settled there.
  */

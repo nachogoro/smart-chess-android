@@ -94,7 +94,7 @@ class AndroidUIModule : UIModule {
      *
      * [lastOpponentMove] is the state the screen renders and stands until it is cleared, which is
      * the wrong shape for spoken announcements: those must happen once, when the move arrives, and
-     * not again because something recomposed. No replay, for the same reason - a collector that
+     * not again because something recomposed. No replay, for the same reason: a collector that
      * subscribes later has missed a move the player has long since played.
      */
     private val _opponentMoved = MutableSharedFlow<ShowOpponentMoveParams>(extraBufferCapacity = 4)

@@ -17,7 +17,7 @@ import scp.protocol.SquareState
  * SCP [BoardModule] backed by the physical board over BLE.
  *
  * This is the only module that differs between the desktop demo (which fakes the board with a
- * file) and this app. Everything upstream - move inference, rules, clocks - is unchanged.
+ * file) and this app. Everything upstream (move inference, rules, clocks) is unchanged.
  *
  * The board reports colour, not piece type, so the capability level is normally
  * [BoardCapabilityLevel.COLOR] and the orchestrator infers moves from colour transitions.
@@ -27,7 +27,7 @@ class BleBoardModule(
 ) : BoardModule {
 
     // The flow carries the errors themselves, so a failure that arrives unprompted says exactly as
-    // much as one returned from a refused call - a sensor failure here names its squares.
+    // much as one returned from a refused call: a sensor failure here names its squares.
     private val _errors = MutableSharedFlow<BoardError>(extraBufferCapacity = 8)
     override val errors: SharedFlow<BoardError> = _errors
 
@@ -80,7 +80,7 @@ class BleBoardModule(
         //
         // The squares travel as a list, not a sentence. This module runs in the same process as
         // the UI here, but it is a board module like any other and may not always: nothing in the
-        // protocol says a board is local, so it words nothing (PROTOCOL.md §2.6).
+        // protocol says a board is local, so it words nothing.
         val unknown = readings.filterValues { it == SquareReading.UNKNOWN }.keys.sorted()
         if (unknown.isNotEmpty()) {
             Log.w(CHESS_LOG_TAG, "Board reading rejected, unreadable squares: ${unknown.joinToString(", ")}")

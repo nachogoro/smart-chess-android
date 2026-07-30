@@ -129,7 +129,7 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.Default) { orchestrator.start() }
 
         // Record a game the moment the orchestrator reports it finished, rather than when the user
-        // dismisses the result dialog - otherwise a game is lost if the app dies at the board.
+        // dismisses the result dialog: otherwise a game is lost if the app dies at the board.
         // Re-recording the same game is harmless: records are keyed by game id and replaced.
         viewModelScope.launch {
             uiModule.gameEnded.collect { historyRepository.record(it) }
@@ -202,7 +202,7 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
      * orchestrator has already returned from its setup flow and is waiting on the platform, so
      * there is no prompt left to cancel and the seek would stay live on the server.
      *
-     * Re-requesting a new game is the orchestrator's documented escape hatch - it withdraws the
+     * Re-requesting a new game is the orchestrator's documented escape hatch: it withdraws the
      * seek, tears the session down and returns to idle. It then immediately asks which mode to
      * play again, which [startGame] answers rather than duplicating.
      */
@@ -258,7 +258,7 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Whose tap the Move Ready and Resign buttons are.
      *
-     * The screen has one of each, so in a local game - two people at one board and one phone - they
+     * The screen has one of each, so in a local game, two people at one board and one phone, they
      * belong to whoever is to move. In an engine or remote game there is only one person here to
      * tap them. The protocol asks the UI for this because only the UI knows how the tap was made,
      * and the orchestrator resigns exactly the colour it is given, so this decides who loses.

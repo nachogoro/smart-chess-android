@@ -30,7 +30,7 @@ import scp.protocol.TimeControlType
  * Covers storing finished games and rendering them back out.
  *
  * Room generates its implementation at build time, so a schema mistake is only visible when a real
- * database is opened on a device - which is what this does, in memory.
+ * database is opened on a device, which is what this does, in memory.
  */
 @RunWith(AndroidJUnit4::class)
 class GameHistoryTest {

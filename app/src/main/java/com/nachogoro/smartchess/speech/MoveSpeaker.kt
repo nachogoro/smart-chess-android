@@ -16,8 +16,8 @@ import java.util.Locale
  * Reads the opponent's move out loud.
  *
  * The player is looking at a physical board, not at the phone, so the move has to reach them
- * without their picking it up. The wording follows algebraic notation's own rule - say no more
- * than the move needs to be unambiguous - because that is what a player is used to hearing.
+ * without their picking it up. The wording follows algebraic notation's own rule, saying no more
+ * than the move needs to be unambiguous, because that is what a player is used to hearing.
  *
  * Construct on the main thread and call [announce] from it; the engine callback is posted there
  * and nothing here is synchronised.
@@ -96,7 +96,7 @@ class MoveSpeaker(context: Context) {
         }
         // Set per utterance rather than once at startup: this object outlives a language change,
         // because the view model owning it survives the activity being recreated. Whatever the
-        // engine makes of the language is accepted - a move read in the wrong accent beats silence.
+        // engine makes of the language is accepted: a move read in the wrong accent beats silence.
         tts.setLanguage(Locale.forLanguageTag(utterance.languageTag))
         // Flush rather than queue: one move arrives per turn, so anything still being spoken is a
         // move the player has already played on the board.
@@ -112,7 +112,7 @@ class MoveSpeaker(context: Context) {
      *
      * The locale still comes from [R.string.announce_locale] rather than from this list, because
      * the two answer different questions. This says which language was asked for; that says which
-     * one the strings actually resolved to - and with the list empty, or set to a language the app
+     * one the strings actually resolved to, and with the list empty, or set to a language the app
      * has no translation for, those differ. The voice has to match the words.
      */
     private fun localizedResources(): Context {

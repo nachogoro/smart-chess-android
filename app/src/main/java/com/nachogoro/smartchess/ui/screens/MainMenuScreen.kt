@@ -31,7 +31,7 @@ import scp.protocol.GameMode
  * Main menu.
  *
  * The play options are derived from [availableModes], which the ViewModel builds from the adapters
- * actually compiled into the build - a build with no engine adapter simply does not offer engine
+ * actually compiled into the build: a build with no engine adapter simply does not offer engine
  * play, rather than offering it and failing.
  */
 @Composable

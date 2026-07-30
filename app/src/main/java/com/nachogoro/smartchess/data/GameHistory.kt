@@ -121,8 +121,8 @@ interface GameHistoryDao {
     @Query("SELECT * FROM games WHERE gameId = :gameId")
     suspend fun find(gameId: String): GameRecord?
 
-    // A game can be reported finished more than once - the adapters replay their last event - and
-    // the second report is the same game, so replacing is right and duplicates are impossible.
+    // A game can be reported finished more than once, since the adapters replay their last event,
+    // and the second report is the same game, so replacing is right and duplicates are impossible.
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(game: GameRecord)
 

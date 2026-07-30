@@ -12,7 +12,7 @@ import androidx.core.location.LocationManagerCompat
  * Runtime permission requirements for BLE, which changed substantially in Android 12.
  *
  * - API 31+: `BLUETOOTH_SCAN` and `BLUETOOTH_CONNECT`. Without them, scanning fails *silently* -
- *   no results, no exception - which is why the app checks up front rather than reacting to a
+ *   no results, no exception, which is why the app checks up front rather than reacting to a
  *   failure.
  * - API 30 and below: `ACCESS_FINE_LOCATION`, and location services must actually be switched on,
  *   because a BLE scan was historically treated as a means of inferring location.

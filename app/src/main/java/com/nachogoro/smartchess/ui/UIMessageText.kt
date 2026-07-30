@@ -9,8 +9,7 @@ import scp.protocol.UIMessage
 /**
  * A message from the orchestrator, in words.
  *
- * The wording lives here because the UI module is the only one that knows who is reading
- * (PROTOCOL.md §2.6).
+ * The wording lives here because the UI module is the only one that knows who is reading.
  */
 fun UIMessage.describe(context: Context): String = when (this) {
     is UIMessage.BoardReadFailed -> context.readFailureText(error)
@@ -50,7 +49,7 @@ fun UIMessage.describe(context: Context): String = when (this) {
 /**
  * This app's wording, with the failing module's code appended.
  *
- * The code rather than the module's `diagnostic`: that field is developer-facing (§2.6) and is
+ * The code rather than the module's `diagnostic`: that field is developer-facing and is
  * English written elsewhere, so showing it would put a fragment in front of the player that no
  * translation of this app could reach. A code at least means something in a bug report.
  */
@@ -61,7 +60,7 @@ private fun Context.withDetail(wording: Int, error: ModuleError): String =
  * A failed board read, said as usefully as the error allows.
  *
  * A sensor failure knows which squares it could not trust, and naming them tells the player where
- * to look - which is the whole reason the board module reports them as a list rather than keeping
+ * to look, which is the whole reason the board module reports them as a list rather than keeping
  * the sentence to itself.
  */
 private fun Context.readFailureText(error: ModuleError): String {

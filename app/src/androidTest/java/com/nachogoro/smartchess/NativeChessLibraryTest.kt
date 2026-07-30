@@ -21,8 +21,8 @@ import scp.protocol.SubmitMoveParams
  * Verifies that the native chess library actually loads and runs on a device.
  *
  * This is the single riskiest part of the port. `simplechess` reaches its C library through JNA,
- * and its stock loading strategy - extract the `.so` from JAR resources into a temp directory and
- * point `jna.library.path` at it - cannot work on Android, because the linker refuses to `dlopen`
+ * and its stock loading strategy (extract the `.so` from JAR resources into a temp directory and
+ * point `jna.library.path` at it) cannot work on Android, because the linker refuses to `dlopen`
  * from an app-writable location. The app instead ships the binaries in `jniLibs/` and relies on
  * the loader falling through to the system path.
  *

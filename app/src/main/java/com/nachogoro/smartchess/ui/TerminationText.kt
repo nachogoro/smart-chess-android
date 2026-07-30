@@ -10,7 +10,7 @@ import scp.protocol.Termination
  * How a game ended, in words.
  *
  * The wording lives here because the UI module is the only one allowed to write it: every other
- * SCP module reports a code, since none of them can know who is reading (PROTOCOL.md §2.6).
+ * SCP module reports a code, since none of them can know who is reading.
  *
  * [result] is read because a termination is a cause and nothing more: whether the game was drawn
  * is the result's to say, and it says so even where the cause has no name.
@@ -28,8 +28,8 @@ fun Termination.describe(context: Context, result: GameResult): String = when (t
     Termination.ThreefoldRepetition -> context.getString(R.string.draw_threefold_repetition)
     Termination.FivefoldRepetition -> context.getString(R.string.draw_fivefold_repetition)
     // Whoever ended the game named something this build does not know. Their own words, or failing
-    // that their identifier, beats inventing a reason for them - and neither is ours to translate.
-    // A drawn game whose rule nobody named - which is most of what Lichess reports - still reads as
+    // that their identifier, beats inventing a reason for them, and neither is ours to translate.
+    // A drawn game whose rule nobody named, which is most of what Lichess reports, still reads as
     // a draw, because the drawn-ness never lived in the cause.
     is Termination.Other -> text
         ?: authorityCode
