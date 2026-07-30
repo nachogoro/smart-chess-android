@@ -75,6 +75,31 @@ fun ChessBoardView(
 }
 
 /**
+ * One piece on a board-coloured square, for showing a piece away from the board.
+ *
+ * The square is not decoration. The piece images are solid silhouettes carrying no outline of
+ * their own, so a black piece drawn straight onto a dark theme's surface would be invisible.
+ */
+@Composable
+fun PieceTile(
+    piece: BoardPiece,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.background(LIGHT_SQUARE),
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            painter = painterResource(piece.drawableRes()),
+            contentDescription = contentDescription,
+            modifier = Modifier.fillMaxSize().padding(4.dp),
+            contentScale = ContentScale.Fit,
+        )
+    }
+}
+
+/**
  * Extracts the piece placement from a FEN string.
  *
  * Only the first field matters here; the rest (side to move, castling rights, clocks) is the

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -34,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
@@ -42,13 +44,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nachogoro.smartchess.ui.AndroidUIModule
+import com.nachogoro.smartchess.ui.components.BoardPiece
 import com.nachogoro.smartchess.ui.components.ChessBoardView
+import com.nachogoro.smartchess.ui.components.PieceTile
 import com.nachogoro.smartchess.ui.components.STARTING_FEN
 import kotlinx.coroutines.delay
 import scp.orchestrator.GameSession
 import scp.orchestrator.OrchestratorState
 import scp.protocol.Color as ChessColor
 import scp.protocol.GameMode
+import scp.protocol.PieceType
 import scp.protocol.PromotionPiece
 
 /**
@@ -366,17 +371,32 @@ private fun GameDialogs(uiModule: AndroidUIModule, onGameEnd: () -> Unit) {
     uiModule.pendingPromotion?.let { request ->
         AlertDialog(
             onDismissRequest = {},
-            title = { Text("Promote to") },
-            text = { Text("Which piece did you promote to?") },
-            confirmButton = {
-                Row {
+            title = { Text("Which piece did you promote to?") },
+            text = {
+                // Pictures rather than names: the player has just put one of these on the board,
+                // and four words do not fit across a dialog - "Knight" was wrapping to one letter
+                // per line. They are shown in the promoting player's own colour.
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     for (piece in PromotionPiece.entries) {
-                        TextButton(onClick = { request.complete(piece) }) {
-                            Text(piece.name.lowercase().replaceFirstChar { it.uppercase() })
-                        }
+                        // A quarter of the dialog each, kept square. Fixed sizes would overflow
+                        // the narrowest dialog a small screen allows.
+                        PieceTile(
+                            piece = BoardPiece(piece.boardType(), request.input.color),
+                            contentDescription = piece.displayName(),
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .clip(MaterialTheme.shapes.small)
+                                .clickable { request.complete(piece) },
+                        )
                     }
                 }
             },
+            // The pieces are the buttons; there is nothing left to confirm.
+            confirmButton = {},
         )
     }
 
@@ -431,6 +451,17 @@ private fun GameDialogs(uiModule: AndroidUIModule, onGameEnd: () -> Unit) {
 }
 
 private fun ChessColor.displayName(): String = if (this == ChessColor.WHITE) "White" else "Black"
+
+private fun PromotionPiece.boardType(): PieceType = when (this) {
+    PromotionPiece.QUEEN -> PieceType.QUEEN
+    PromotionPiece.ROOK -> PieceType.ROOK
+    PromotionPiece.BISHOP -> PieceType.BISHOP
+    PromotionPiece.KNIGHT -> PieceType.KNIGHT
+}
+
+/** Names the piece for a screen reader, which the image on its own cannot. */
+private fun PromotionPiece.displayName(): String =
+    name.lowercase().replaceFirstChar { it.uppercase() }
 
 /** Formats milliseconds as m:ss, or h:mm:ss once the clock runs past an hour. */
 private fun Long.formatClock(): String {
