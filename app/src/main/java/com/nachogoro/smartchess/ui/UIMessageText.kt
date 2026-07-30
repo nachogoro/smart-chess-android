@@ -1,5 +1,6 @@
 package com.nachogoro.smartchess.ui
 
+import scp.protocol.BoardError
 import scp.protocol.Color
 import scp.protocol.DrawOffer
 import scp.protocol.ModuleError
@@ -13,7 +14,7 @@ import scp.protocol.UIMessage
  * changed is that choosing them is now this layer's job.
  */
 fun UIMessage.describe(): String = when (this) {
-    UIMessage.BoardReadFailed -> "Could not read the board."
+    is UIMessage.BoardReadFailed -> readFailureText(error)
     UIMessage.BoardUnchanged -> "The board has not changed. Move a piece, then tap again."
     UIMessage.NoLegalMoveMatches -> "The board does not match any legal move."
     UIMessage.EngineCapabilitiesUnavailable -> "Could not read the engine's capabilities."
@@ -47,6 +48,28 @@ fun UIMessage.describe(): String = when (this) {
  * reading a bug report.
  */
 private infix fun String.withDetail(error: ModuleError) = "$this (${error.code})"
+
+/**
+ * A failed board read, said as usefully as the error allows.
+ *
+ * A sensor failure knows which squares it could not trust, and naming them tells the player where
+ * to look - which is the whole reason the board module reports them as a list rather than keeping
+ * the sentence to itself.
+ */
+private fun readFailureText(error: ModuleError): String {
+    val squares = (error as? BoardError.SensorFailure)?.unreadableSquares.orEmpty()
+    return when {
+        squares.isEmpty() -> "Could not read the board." withDetail error
+        squares.size == 1 ->
+            "Could not read square ${squares.single()}. Re-seat the piece and try again."
+        // Enough to act on without becoming a wall of coordinates.
+        squares.size <= 6 ->
+            "Could not read squares ${squares.joinToString(", ")}. Re-seat the pieces and try again."
+        else ->
+            "Could not read ${squares.size} squares, including " +
+                "${squares.take(6).joinToString(", ")}. Re-seat the pieces and try again."
+    }
+}
 
 /**
  * Who offered a draw, in words.

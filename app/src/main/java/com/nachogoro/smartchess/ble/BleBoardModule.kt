@@ -53,15 +53,15 @@ class BleBoardModule(
             // Worth a line of its own: in simulation mode the board may already have advanced its
             // script before the response went missing, so a failed read is not a no-op.
             Log.w(CHESS_LOG_TAG, "Board read failed: $message")
-            _errors.tryEmit(BoardErrorEvent("DISCONNECTED", message))
-            return Result.Failure(BoardError.Disconnected(message))
+            _errors.tryEmit(BoardErrorEvent("DISCONNECTED", diagnostic = message))
+            return Result.Failure(BoardError.Disconnected(diagnostic = message))
         }
 
         val readings = when (val parsed = parseBoardState(raw)) {
             is PacketResult.Invalid -> {
                 Log.w(CHESS_LOG_TAG, "Board packet rejected: ${parsed.reason}")
-                _errors.tryEmit(BoardErrorEvent("SENSOR_FAILURE", parsed.reason))
-                return Result.Failure(BoardError.SensorFailure(parsed.reason))
+                _errors.tryEmit(BoardErrorEvent("SENSOR_FAILURE", diagnostic = parsed.reason))
+                return Result.Failure(BoardError.SensorFailure(diagnostic = parsed.reason))
             }
 
             is PacketResult.Ok -> parsed.value
@@ -72,20 +72,17 @@ class BleBoardModule(
         Log.i(CHESS_LOG_TAG, "Board reports ${readings.toPlacement()}")
 
         // An unreadable square is not an empty square. Rather than let the orchestrator infer a
-        // move from a sensor glitch, report the failure and name the offending squares so the
-        // player can re-seat the pieces and try again.
+        // move from a sensor glitch, report the failure and name the offending squares so the UI
+        // can tell the player which pieces to re-seat.
+        //
+        // The squares travel as a list, not a sentence. This module runs in the same process as
+        // the UI here, but it is a board module like any other and may not always: nothing in the
+        // protocol says a board is local, so it words nothing (PROTOCOL.md §2.6).
         val unknown = readings.filterValues { it == SquareReading.UNKNOWN }.keys.sorted()
         if (unknown.isNotEmpty()) {
-            val message = buildString {
-                append("Could not read ")
-                append(if (unknown.size == 1) "square " else "squares ")
-                append(unknown.take(6).joinToString(", "))
-                if (unknown.size > 6) append(" and ${unknown.size - 6} more")
-                append(". Re-seat the pieces and try again.")
-            }
-            Log.w(CHESS_LOG_TAG, "Board reading rejected: $message")
-            _errors.tryEmit(BoardErrorEvent("SENSOR_FAILURE", message))
-            return Result.Failure(BoardError.SensorFailure(message))
+            Log.w(CHESS_LOG_TAG, "Board reading rejected, unreadable squares: ${unknown.joinToString(", ")}")
+            _errors.tryEmit(BoardErrorEvent("SENSOR_FAILURE", diagnostic = "unreadable squares"))
+            return Result.Failure(BoardError.SensorFailure(unreadableSquares = unknown))
         }
 
         val squares = readings.mapValues { (_, reading) ->
