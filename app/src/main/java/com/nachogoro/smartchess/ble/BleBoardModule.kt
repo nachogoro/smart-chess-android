@@ -1,5 +1,7 @@
 package com.nachogoro.smartchess.ble
 
+import android.util.Log
+import com.nachogoro.smartchess.CHESS_LOG_TAG
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import scp.protocol.BoardCapabilities
@@ -48,18 +50,26 @@ class BleBoardModule(
             connection.readBoardState()
         } catch (e: Exception) {
             val message = e.message ?: "Could not read the board"
+            // Worth a line of its own: in simulation mode the board may already have advanced its
+            // script before the response went missing, so a failed read is not a no-op.
+            Log.w(CHESS_LOG_TAG, "Board read failed: $message")
             _errors.tryEmit(BoardErrorEvent("DISCONNECTED", message))
             return Result.Failure(BoardError.Disconnected(message))
         }
 
         val readings = when (val parsed = parseBoardState(raw)) {
             is PacketResult.Invalid -> {
+                Log.w(CHESS_LOG_TAG, "Board packet rejected: ${parsed.reason}")
                 _errors.tryEmit(BoardErrorEvent("SENSOR_FAILURE", parsed.reason))
                 return Result.Failure(BoardError.SensorFailure(parsed.reason))
             }
 
             is PacketResult.Ok -> parsed.value
         }
+
+        // Logged before the checks below, so a reading that gets rejected is still on the record.
+        // The raw bytes are already traced by the connection; this is what they decoded to.
+        Log.i(CHESS_LOG_TAG, "Board reports ${readings.toPlacement()}")
 
         // An unreadable square is not an empty square. Rather than let the orchestrator infer a
         // move from a sensor glitch, report the failure and name the offending squares so the
@@ -73,6 +83,7 @@ class BleBoardModule(
                 if (unknown.size > 6) append(" and ${unknown.size - 6} more")
                 append(". Re-seat the pieces and try again.")
             }
+            Log.w(CHESS_LOG_TAG, "Board reading rejected: $message")
             _errors.tryEmit(BoardErrorEvent("SENSOR_FAILURE", message))
             return Result.Failure(BoardError.SensorFailure(message))
         }
@@ -89,6 +100,36 @@ class BleBoardModule(
         return Result.Success(BoardState(squares))
     }
 }
+
+/**
+ * The reading as a single line, in FEN's placement style: ranks 8 down to 1, `/` between them,
+ * runs of empty squares as a count.
+ *
+ * `W` and `b` rather than piece letters, because colour is all the board reports, and `?` for a
+ * square it could not read. Short enough to log on every read and complete enough to reconstruct
+ * exactly what the sensor said, which a hex dump only is not.
+ */
+internal fun Map<String, SquareReading>.toPlacement(): String =
+    (8 downTo 1).joinToString("/") { rank ->
+        buildString {
+            var empty = 0
+            for (file in 'a'..'h') {
+                val symbol = when (this@toPlacement["$file$rank"]) {
+                    SquareReading.WHITE -> 'W'
+                    SquareReading.BLACK -> 'b'
+                    SquareReading.UNKNOWN -> '?'
+                    else -> null
+                }
+                if (symbol == null) {
+                    empty++
+                } else {
+                    if (empty > 0) append(empty).also { empty = 0 }
+                    append(symbol)
+                }
+            }
+            if (empty > 0) append(empty)
+        }
+    }
 
 /**
  * Maps the firmware's numeric capability level onto the SCP levels.

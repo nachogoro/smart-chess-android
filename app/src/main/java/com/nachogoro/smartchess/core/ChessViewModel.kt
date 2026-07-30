@@ -1,8 +1,10 @@
 package com.nachogoro.smartchess.core
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.nachogoro.smartchess.CHESS_LOG_TAG
 import com.nachogoro.smartchess.ble.BleBoardConnection
 import com.nachogoro.smartchess.ble.BleBoardModule
 import com.nachogoro.smartchess.ble.BoardConnectionState
@@ -237,8 +239,11 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
      * what was played.
      */
     fun signalMoveReady() {
-        val gameId = _session.value?.gameId ?: return
-        viewModelScope.launch { uiModule.signalMoveReady(gameId) }
+        val session = _session.value ?: return
+        // Pins what the app believed before the board is read. Paired with the reading that comes
+        // back, it is what makes a disagreement between the two legible after the fact.
+        Log.i(CHESS_LOG_TAG, "Move ready; expecting one move from ${session.fen}")
+        viewModelScope.launch { uiModule.signalMoveReady(session.gameId) }
     }
 
     fun resign() {

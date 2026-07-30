@@ -1,8 +1,10 @@
 package com.nachogoro.smartchess.ui
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.nachogoro.smartchess.CHESS_LOG_TAG
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -149,27 +151,35 @@ class AndroidUIModule : UIModule {
 
     override suspend fun onGameStarted(info: GameStartedInfo) {
         isSeeking = false
+        Log.i(CHESS_LOG_TAG, "Game ${info.gameId} started (${info.mode}) from ${info.initialFen}")
         lastGameSummary = null
         lastGameStartedInfo = info
     }
 
     override suspend fun onGameEnded(summary: GameSummary) {
+        Log.i(CHESS_LOG_TAG, "Game ended ${summary.result} (${summary.reason})")
         lastGameSummary = summary
         _gameEnded.emit(summary)
     }
 
     override suspend fun showOpponentMove(params: ShowOpponentMoveParams): Result<UIError, Unit> {
+        Log.i(CHESS_LOG_TAG, "Opponent played ${params.san} (${params.move}); now ${params.fen}")
         lastOpponentMove = params
         _opponentMoved.emit(params)
         return Result.Success(Unit)
     }
 
     override suspend fun displayError(message: String): Result<UIError, Unit> {
+        Log.i(CHESS_LOG_TAG, "Reported to the player: $message")
         lastError = message
         return Result.Success(Unit)
     }
 
     override suspend fun boardDesync(expectedFen: String, message: String): Result<UIError, Unit> {
+        // The expected position is the other half of a desync and appears nowhere on screen, so
+        // without it here the reading the board sent cannot be told apart from the one it should
+        // have sent.
+        Log.w(CHESS_LOG_TAG, "Desync: $message; expected $expectedFen")
         desyncInfo = DesyncInfo(expectedFen, message)
         return Result.Success(Unit)
     }
