@@ -140,6 +140,16 @@ class BleBoardConnection(context: Context) {
     @Volatile
     private var knownCapabilities: BoardCapabilitiesPacket? = null
 
+    /**
+     * The board's name as read while it was reachable.
+     *
+     * [BluetoothDevice.getName] returns null once there is nothing cached for a device that is no
+     * longer connected, so re-reading it on disconnection would swap the board's name for a generic
+     * label every time the link idles out.
+     */
+    @Volatile
+    private var knownDeviceName: String? = null
+
     /** True only while the link is actually up. */
     val isReady: Boolean get() = _state.value is BoardConnectionState.Ready
 
@@ -196,6 +206,7 @@ class BleBoardConnection(context: Context) {
 
                 is PacketResult.Ok -> {
                     knownDevice = device
+                    knownDeviceName = device.safeName()
                     knownCapabilities = caps.value
                     _state.value = BoardConnectionState.Ready(device.safeName(), caps.value)
                     Result.success(Unit)
@@ -243,6 +254,7 @@ class BleBoardConnection(context: Context) {
         // rather than reconnect to whatever was in range last time the app ran.
         knownDevice = null
         knownCapabilities = null
+        knownDeviceName = null
         if (_state.value !is BoardConnectionState.Failed) {
             _state.value = BoardConnectionState.Idle
         }
@@ -368,7 +380,7 @@ class BleBoardConnection(context: Context) {
             try {
                 connectGatt(device, RECONNECT_ATTEMPT_TIMEOUT_MS)
                 // Capabilities are static, so the reconnect does not re-read them.
-                _state.value = BoardConnectionState.Ready(device.safeName(), caps)
+                _state.value = BoardConnectionState.Ready(knownDeviceName, caps)
                 return
             } catch (e: BleOperationException) {
                 Log.i(TAG, "Reconnect attempt ${attempt + 1}/$RECONNECT_ATTEMPTS: ${e.message}")
@@ -459,7 +471,7 @@ class BleBoardConnection(context: Context) {
                         // operation. Since a game reads the board minutes apart, a drop is the
                         // normal resting state, not a fault - the next read reconnects.
                         _state.value = if (device != null && caps != null) {
-                            BoardConnectionState.Disconnected(device.safeName(), caps)
+                            BoardConnectionState.Disconnected(knownDeviceName, caps)
                         } else {
                             BoardConnectionState.Failed("Board disconnected")
                         }
