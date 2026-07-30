@@ -31,7 +31,17 @@ include(":app")
 // in transitively by the scp modules at the version they declare. It used to be composite-built
 // from ../simple-chess-kotlin because the published 1.0.0 froze native pointers through
 // java.lang.ref.Cleaner (API 33+); 1.1.0 replaced that, so the published artifact works on Android.
-includeBuild("../smart-chess-scp") {
+//
+// The location is checked before use, and overridable with -PscpDir. Nothing publishes the scp
+// modules, so `scp:*` coordinates resolve through the substitutions below and nowhere else: without
+// this check a missing sibling surfaces as a failure to resolve an artifact that exists in no
+// repository, which reads as a broken repository rather than a missing checkout.
+val scpDir = settingsDir.resolve(providers.gradleProperty("scpDir").getOrElse("../smart-chess-scp"))
+require(scpDir.isDirectory) {
+    "smart-chess-scp not found at $scpDir - clone it beside this repo, or pass -PscpDir=<path>."
+}
+
+includeBuild(scpDir) {
     dependencySubstitution {
         substitute(module("scp:scp-core")).using(project(":scp-core"))
         substitute(module("scp:orchestrator")).using(project(":orchestrator"))
