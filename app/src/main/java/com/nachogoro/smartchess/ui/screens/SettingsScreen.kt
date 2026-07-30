@@ -15,12 +15,14 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nachogoro.smartchess.ble.BoardConnectionState
@@ -38,6 +40,7 @@ fun SettingsScreen(
     settings: AppSettings,
     connectionState: BoardConnectionState,
     onSavePlayerName: (String) -> Unit,
+    onSetAnnounceOpponentMoves: (Boolean) -> Unit,
     onClearModuleSettings: (String) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -67,6 +70,28 @@ fun SettingsScreen(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
+
+        Spacer(Modifier.height(24.dp))
+
+        // Applied on the spot rather than on Save: a switch that has visibly moved but not taken
+        // effect is a trap, and the Save button exists for the text field above.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Speak the opponent's moves", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Reads out each move your opponent plays, so you can keep your eyes on the " +
+                        "board.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Switch(
+                checked = settings.announceOpponentMoves,
+                onCheckedChange = onSetAnnounceOpponentMoves,
+            )
+        }
 
         Spacer(Modifier.height(24.dp))
 

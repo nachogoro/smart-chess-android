@@ -135,7 +135,9 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
         // Announced from here rather than from the game screen: the move is spoken because it
         // happened, not because something is on screen to show it.
         viewModelScope.launch {
-            uiModule.opponentMoved.collect { move -> speaker.announce(move) }
+            uiModule.opponentMoved.collect { move ->
+                if (settings.value.announceOpponentMoves) speaker.announce(move)
+            }
         }
 
         viewModelScope.launch {
@@ -262,6 +264,10 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
 
     fun saveModuleSettings(moduleName: String, values: Map<String, String>) {
         viewModelScope.launch { settingsRepository.saveModuleSettings(moduleName, values) }
+    }
+
+    fun setAnnounceOpponentMoves(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setAnnounceOpponentMoves(enabled) }
     }
 
     override fun onCleared() {

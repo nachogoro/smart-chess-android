@@ -3,6 +3,7 @@ package com.nachogoro.smartchess.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -22,6 +23,8 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 data class AppSettings(
     val playerName: String = "",
     val moduleSettings: Map<String, Map<String, String>> = emptyMap(),
+    /** Whether the opponent's moves are read out loud as well as shown. */
+    val announceOpponentMoves: Boolean = true,
 ) {
     fun settingsFor(moduleName: String): Map<String, String> = moduleSettings[moduleName].orEmpty()
 
@@ -37,11 +40,16 @@ class SettingsRepository(context: Context) {
         AppSettings(
             playerName = prefs[KEY_PLAYER_NAME].orEmpty(),
             moduleSettings = decodeModuleSettings(prefs[KEY_MODULE_SETTINGS]),
+            announceOpponentMoves = prefs[KEY_ANNOUNCE_OPPONENT_MOVES] ?: true,
         )
     }
 
     suspend fun setPlayerName(name: String) {
         dataStore.edit { it[KEY_PLAYER_NAME] = name }
+    }
+
+    suspend fun setAnnounceOpponentMoves(enabled: Boolean) {
+        dataStore.edit { it[KEY_ANNOUNCE_OPPONENT_MOVES] = enabled }
     }
 
     /**
@@ -80,5 +88,6 @@ class SettingsRepository(context: Context) {
     private companion object {
         val KEY_PLAYER_NAME = stringPreferencesKey("player_name")
         val KEY_MODULE_SETTINGS = stringPreferencesKey("module_settings")
+        val KEY_ANNOUNCE_OPPONENT_MOVES = booleanPreferencesKey("announce_opponent_moves")
     }
 }
