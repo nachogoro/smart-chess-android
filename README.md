@@ -7,8 +7,9 @@ everything else — the rules, move inference, clocks, engine and online play.
 ## Architecture
 
 The app is a client of the [Simple Chess Protocol](../smart-chess-protocol) (the specification).
-The protocol's module implementations live in the sibling [`smart-chess-scp`](../smart-chess-scp)
-repo; every one of them is reused unchanged, and only two modules are Android-specific:
+The protocol's module implementations live in [`smart-chess-scp`](https://github.com/nachogoro/smart-chess-scp),
+carried here as a git submodule; every one of them is reused unchanged, and only two modules are
+Android-specific:
 
 | SCP module | Where it comes from |
 |---|---|
@@ -16,8 +17,9 @@ repo; every one of them is reused unchanged, and only two modules are Android-sp
 | UI | **This app** (`ui/AndroidUIModule`) — Compose |
 | Orchestrator, Game Controller, Engine adapters, Remote adapters | `smart-chess-scp`, unchanged |
 
-The SCP modules are consumed as a Gradle **composite build**, so edits in smart-chess-scp are
-picked up immediately without publishing. See `settings.gradle.kts`.
+The SCP modules are consumed as a Gradle **composite build**, so edits to them are picked up
+immediately without publishing, wherever the checkout resolves from. See **Building** below and
+`settings.gradle.kts`.
 
 ```
 Physical board ──BLE──> BleBoardModule ──┐
@@ -125,24 +127,40 @@ wrapped at 80 columns and terminated by the result, so other chess software can 
 
 ## Building
 
-This app consumes the SCP modules from the sibling `smart-chess-scp` repository as a Gradle
-**composite build** (relative path `../smart-chess-scp` in `settings.gradle.kts`), so the two must
-be checked out side by side:
+This app consumes the SCP modules as a Gradle **composite build**. They are carried as a git
+submodule, so this repo builds on its own:
+
+```sh
+git clone --recurse-submodules git@github.com:nachogoro/smart-chess-android.git
+cd smart-chess-android
+```
+
+If you cloned without `--recurse-submodules`, run `git submodule update --init`.
+
+The submodule is a normal checkout with its own remote: edits under `smart-chess-scp/` are picked
+up by the next build, and you commit and push them from inside that directory like any other repo.
+The commit the submodule points at is the SCP revision this app is known to build against — bump it
+deliberately with `git add smart-chess-scp` here once the change is pushed there.
+
+### Sharing one checkout with the desktop app
+
+Both apps consume the same modules, so a workspace holding both is better served by a single
+checkout — one edit then reaches both, rather than having to be made twice. Put it beside this repo
+and it wins over the submodule automatically:
 
 ```
 <parent>/
 ├── smart-chess-android    # this repo
-└── smart-chess-scp        # the SCP module implementations
+├── smart-chess-desktop
+└── smart-chess-scp        # takes precedence over the submodule
 ```
 
-```sh
-git clone git@github.com:nachogoro/smart-chess-android.git
-git clone git@github.com:nachogoro/smart-chess-scp.git
-cd smart-chess-android
-```
+Anywhere else, point at it with `-PscpDir=<path>` (absolute or relative), or set `scpDir` in
+`gradle.properties` to make it permanent. Every build prints which checkout it resolved, because a
+sibling silently shadowing the submodule is otherwise easy to forget.
 
 The native rules library (`io.github.nachogoro:simplechess`) comes from Maven Central, pulled in
-transitively by the scp modules — no sibling checkout of it is needed. Then:
+transitively by the scp modules — no checkout of it is needed. Then:
 
 ```sh
 # Requires an Android SDK; see local.properties

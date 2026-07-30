@@ -305,7 +305,8 @@ $ANDROID_HOME/emulator/emulator -avd Pixel_XL_API_30 -no-window -no-audio &
 ./gradlew :app:connectedDebugAndroidTest        # 22 instrumented tests
 
 # Every commit builds from a clean checkout — the loop I used, worth re-running after any rebase.
-# The worktree must be a sibling of the other repos: the composite build uses relative paths.
+# The worktree must be a sibling of the other repos: `git worktree add` does not populate
+# submodules, so the composite build has to resolve smart-chess-scp from the sibling checkout.
 git worktree add -q --detach ../.verify-wt HEAD
 for sha in $(git rev-list --reverse HEAD); do
   (cd ../.verify-wt && git checkout -q --detach $sha && cp ../smart-chess-android-app/local.properties . \

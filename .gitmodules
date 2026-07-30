@@ -1,0 +1,3 @@
+[submodule "smart-chess-scp"]
+	path = smart-chess-scp
+	url = git@github.com:nachogoro/smart-chess-scp.git

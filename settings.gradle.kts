@@ -19,9 +19,9 @@ rootProject.name = "smart-chess-android-app"
 
 include(":app")
 
-// The SCP modules (scp-core, orchestrator, game controller, engine and remote adapters) live in
-// the sibling smart-chess-scp repo and are consumed as a Gradle composite build, so edits there
-// are picked up immediately without publishing.
+// The SCP modules (scp-core, orchestrator, game controller, engine and remote adapters) are
+// consumed as a Gradle composite build, so edits to them are picked up immediately without
+// publishing.
 //
 // Substitutions are declared explicitly rather than relying on auto-detection, because the scp
 // build assigns `group` inside a `subprojects {}` block, which is not always visible to Gradle's
@@ -32,14 +32,24 @@ include(":app")
 // from ../simple-chess-kotlin because the published 1.0.0 froze native pointers through
 // java.lang.ref.Cleaner (API 33+); 1.1.0 replaced that, so the published artifact works on Android.
 //
-// The location is checked before use, and overridable with -PscpDir. Nothing publishes the scp
-// modules, so `scp:*` coordinates resolve through the substitutions below and nowhere else: without
-// this check a missing sibling surfaces as a failure to resolve an artifact that exists in no
-// repository, which reads as a broken repository rather than a missing checkout.
-val scpDir = settingsDir.resolve(providers.gradleProperty("scpDir").getOrElse("../smart-chess-scp"))
-require(scpDir.isDirectory) {
-    "smart-chess-scp not found at $scpDir - clone it beside this repo, or pass -PscpDir=<path>."
+// The checkout is looked for in three places, in order: an explicit -PscpDir (or the same property
+// in gradle.properties), a sibling checkout, and the bundled submodule. The sibling wins over the
+// submodule so that in a workspace holding both apps one edit still reaches both of them; the
+// submodule is what makes a clone of this repo alone enough to build.
+//
+// The probe is for settings.gradle.kts rather than the directory, because `git clone` without
+// --recurse-submodules leaves the submodule path behind as an empty directory. That passes a
+// directory check and then fails much later as an unresolvable `scp:*` coordinate. Nothing
+// publishes the scp modules, so those coordinates resolve through the substitutions below and
+// nowhere else, and the failure reads as a broken repository rather than a missing checkout.
+val scpDir = (providers.gradleProperty("scpDir").map { settingsDir.resolve(it) }.orNull
+    ?: settingsDir.resolve("../smart-chess-scp").takeIf { it.isDirectory }
+    ?: settingsDir.resolve("smart-chess-scp")).canonicalFile
+require(scpDir.resolve("settings.gradle.kts").isFile) {
+    "smart-chess-scp not found at $scpDir - run `git submodule update --init`, " +
+        "or pass -PscpDir=<path>."
 }
+logger.lifecycle("Using smart-chess-scp from $scpDir")
 
 includeBuild(scpDir) {
     dependencySubstitution {
