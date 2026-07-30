@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nachogoro.smartchess.R
 import com.nachogoro.smartchess.ui.AndroidUIModule
 import com.nachogoro.smartchess.ui.describe
 import com.nachogoro.smartchess.ui.components.BoardPiece
@@ -107,7 +109,7 @@ fun GameScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             // Black's clock is rotated so it reads correctly from the far side of the board.
             ClockPanel(
-                label = session?.blackName ?: "Black",
+                label = session?.blackName ?: stringResource(R.string.color_black),
                 timeMs = session?.clocks?.blackMs,
                 isActive = turnColor == ChessColor.BLACK,
                 incrementMs = session?.timeControl?.incrementMs ?: 0L,
@@ -128,7 +130,7 @@ fun GameScreen(
             )
 
             ClockPanel(
-                label = session?.whiteName ?: "White",
+                label = session?.whiteName ?: stringResource(R.string.color_white),
                 timeMs = session?.clocks?.whiteMs,
                 isActive = turnColor == ChessColor.WHITE,
                 incrementMs = session?.timeControl?.incrementMs ?: 0L,
@@ -158,18 +160,18 @@ private fun CenterPanel(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         val statusText = when (orchestratorState) {
-            is OrchestratorState.Idle -> "Waiting..."
-            is OrchestratorState.SeekingGame -> "Looking for an opponent..."
+            is OrchestratorState.Idle -> stringResource(R.string.game_waiting)
+            is OrchestratorState.SeekingGame -> stringResource(R.string.game_seeking)
             is OrchestratorState.AwaitingPlayerMove ->
-                "${orchestratorState.color.displayName()} to move"
+                stringResource(R.string.game_to_move, orchestratorState.color.displayName())
 
             // An engine is computing rather than merely absent, so say so - "waiting for Black"
             // reads like a stall when the phone is in fact busy searching.
             is OrchestratorState.AwaitingOpponentMove ->
                 if (session?.mode == GameMode.ENGINE) {
-                    "Engine is thinking..."
+                    stringResource(R.string.game_engine_thinking)
                 } else {
-                    "Waiting for ${orchestratorState.color.displayName()}..."
+                    stringResource(R.string.game_waiting_for, orchestratorState.color.displayName())
                 }
         }
 
@@ -182,7 +184,7 @@ private fun CenterPanel(
         if (awaitingPlayer) {
             Spacer(Modifier.height(4.dp))
             Text(
-                "Move on the board, then tap anywhere",
+                stringResource(R.string.game_move_then_tap),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
@@ -210,7 +212,11 @@ private fun CenterPanel(
             IconButton(onClick = onToggleBoard) {
                 Icon(
                     Icons.Default.GridOn,
-                    contentDescription = if (showBoard) "Hide board" else "Show board",
+                    contentDescription = if (showBoard) {
+                        stringResource(R.string.game_hide_board)
+                    } else {
+                        stringResource(R.string.game_show_board)
+                    },
                     tint = if (showBoard) {
                         MaterialTheme.colorScheme.primary
                     } else {
@@ -219,10 +225,10 @@ private fun CenterPanel(
                 )
             }
 
-            TextButton(onClick = onOfferDraw) { Text("Draw") }
-            TextButton(onClick = onResign) { Text("Resign") }
+            TextButton(onClick = onOfferDraw) { Text(stringResource(R.string.game_draw)) }
+            TextButton(onClick = onResign) { Text(stringResource(R.string.game_resign)) }
             if (session?.mode == GameMode.REMOTE) {
-                TextButton(onClick = onAbort) { Text("Abort") }
+                TextButton(onClick = onAbort) { Text(stringResource(R.string.game_abort)) }
             }
         }
     }
@@ -311,12 +317,12 @@ private fun NotificationArea(uiModule: AndroidUIModule) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
-                    "Opponent played ${opponentMove.san}",
+                    stringResource(R.string.game_opponent_played, opponentMove.san),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    "Play it on your board, make your reply, then tap.",
+                    stringResource(R.string.game_replay_on_board),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -333,7 +339,7 @@ private fun NotificationArea(uiModule: AndroidUIModule) {
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
-                    "Board out of sync",
+                    stringResource(R.string.game_desync_title),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
@@ -342,7 +348,7 @@ private fun NotificationArea(uiModule: AndroidUIModule) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
-                TextButton(onClick = { uiModule.clearDesync() }) { Text("Dismiss") }
+                TextButton(onClick = { uiModule.clearDesync() }) { Text(stringResource(R.string.game_dismiss)) }
             }
         }
     }
@@ -361,7 +367,7 @@ private fun NotificationArea(uiModule: AndroidUIModule) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
-                TextButton(onClick = { uiModule.clearError() }) { Text("Dismiss") }
+                TextButton(onClick = { uiModule.clearError() }) { Text(stringResource(R.string.game_dismiss)) }
             }
         }
     }
@@ -373,7 +379,7 @@ private fun GameDialogs(uiModule: AndroidUIModule, onGameEnd: () -> Unit) {
     uiModule.pendingPromotion?.let { request ->
         AlertDialog(
             onDismissRequest = {},
-            title = { Text("Which piece did you promote to?") },
+            title = { Text(stringResource(R.string.game_promotion_question)) },
             text = {
                 // Pictures rather than names: the player has just put one of these on the board,
                 // and four words do not fit across a dialog - "Knight" was wrapping to one letter
@@ -406,8 +412,8 @@ private fun GameDialogs(uiModule: AndroidUIModule, onGameEnd: () -> Unit) {
     uiModule.pendingDisambiguation?.let { request ->
         AlertDialog(
             onDismissRequest = {},
-            title = { Text("Which move did you play?") },
-            text = { Text("The board position matches more than one legal move.") },
+            title = { Text(stringResource(R.string.game_disambiguation_title)) },
+            text = { Text(stringResource(R.string.game_disambiguation_explanation)) },
             confirmButton = {
                 Column {
                     for (move in request.input.moves) {
@@ -421,11 +427,13 @@ private fun GameDialogs(uiModule: AndroidUIModule, onGameEnd: () -> Unit) {
     uiModule.pendingDrawResponse?.let { request ->
         AlertDialog(
             onDismissRequest = { request.complete(false) },
-            title = { Text("Draw offered") },
-            text = { Text("${request.input.describe(LocalContext.current)} offers a draw.") },
-            confirmButton = { Button(onClick = { request.complete(true) }) { Text("Accept") } },
+            title = { Text(stringResource(R.string.game_draw_offered_title)) },
+            text = {
+                Text(stringResource(R.string.game_draw_offered, request.input.describe(LocalContext.current)))
+            },
+            confirmButton = { Button(onClick = { request.complete(true) }) { Text(stringResource(R.string.game_accept)) } },
             dismissButton = {
-                OutlinedButton(onClick = { request.complete(false) }) { Text("Decline") }
+                OutlinedButton(onClick = { request.complete(false) }) { Text(stringResource(R.string.game_decline)) }
             },
         )
     }
@@ -433,7 +441,7 @@ private fun GameDialogs(uiModule: AndroidUIModule, onGameEnd: () -> Unit) {
     uiModule.lastGameSummary?.let { summary ->
         AlertDialog(
             onDismissRequest = {},
-            title = { Text("Game over") },
+            title = { Text(stringResource(R.string.game_over_title)) },
             text = {
                 Column {
                     Text(summary.result.protocolString, style = MaterialTheme.typography.headlineSmall)
@@ -441,18 +449,20 @@ private fun GameDialogs(uiModule: AndroidUIModule, onGameEnd: () -> Unit) {
                     Text(summary.termination.describe(LocalContext.current), style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "${summary.moves.size} moves played",
+                        stringResource(R.string.game_moves_played, summary.moves.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             },
-            confirmButton = { Button(onClick = onGameEnd) { Text("Done") } },
+            confirmButton = { Button(onClick = onGameEnd) { Text(stringResource(R.string.game_done)) } },
         )
     }
 }
 
-private fun ChessColor.displayName(): String = if (this == ChessColor.WHITE) "White" else "Black"
+@Composable
+private fun ChessColor.displayName(): String =
+    stringResource(if (this == ChessColor.WHITE) R.string.color_white else R.string.color_black)
 
 private fun PromotionPiece.boardType(): PieceType = when (this) {
     PromotionPiece.QUEEN -> PieceType.QUEEN
@@ -462,8 +472,15 @@ private fun PromotionPiece.boardType(): PieceType = when (this) {
 }
 
 /** Names the piece for a screen reader, which the image on its own cannot. */
-private fun PromotionPiece.displayName(): String =
-    name.lowercase().replaceFirstChar { it.uppercase() }
+@Composable
+private fun PromotionPiece.displayName(): String = stringResource(
+    when (this) {
+        PromotionPiece.QUEEN -> R.string.piece_name_queen
+        PromotionPiece.ROOK -> R.string.piece_name_rook
+        PromotionPiece.BISHOP -> R.string.piece_name_bishop
+        PromotionPiece.KNIGHT -> R.string.piece_name_knight
+    }
+)
 
 /** Formats milliseconds as m:ss, or h:mm:ss once the clock runs past an hour. */
 private fun Long.formatClock(): String {

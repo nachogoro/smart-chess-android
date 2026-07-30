@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nachogoro.smartchess.R
 import scp.protocol.Color as ChessColor
@@ -165,11 +166,22 @@ private fun BoardPiece.drawableRes(): Int = when (color) {
     }
 }
 
-private fun BoardPiece.contentDescription(square: String): String {
-    val colorName = if (color == ChessColor.WHITE) "White" else "Black"
-    val pieceName = type.name.lowercase().replaceFirstChar { it.uppercase() }
-    return "$colorName $pieceName on $square"
-}
+@Composable
+private fun BoardPiece.contentDescription(square: String): String = stringResource(
+    R.string.board_piece_on_square,
+    stringResource(if (color == ChessColor.WHITE) R.string.color_white else R.string.color_black),
+    stringResource(
+        when (type) {
+            PieceType.PAWN -> R.string.piece_name_pawn
+            PieceType.KNIGHT -> R.string.piece_name_knight
+            PieceType.BISHOP -> R.string.piece_name_bishop
+            PieceType.ROOK -> R.string.piece_name_rook
+            PieceType.QUEEN -> R.string.piece_name_queen
+            PieceType.KING -> R.string.piece_name_king
+        }
+    ),
+    square,
+)
 
 /** Standard starting position, used before the first move is known. */
 const val STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"

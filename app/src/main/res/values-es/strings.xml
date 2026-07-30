@@ -139,4 +139,44 @@
     <string name="board_detects_occupancy">si está ocupada</string>
     <string name="board_detects_colour">el color de la pieza</string>
     <string name="board_detects_piece_type">el tipo de pieza</string>
+
+    <!-- Pantalla de juego -->
+    <string name="game_waiting">Esperando\u2026</string>
+    <string name="game_seeking">Buscando rival\u2026</string>
+    <string name="game_engine_thinking">El motor está pensando\u2026</string>
+    <!-- De quién es el turno: blancas o negras. -->
+    <string name="game_to_move">Juegan %1$s</string>
+    <string name="game_waiting_for">Esperando a %1$s\u2026</string>
+    <string name="game_move_then_tap">Mueve en el tablero y luego toca en cualquier sitio</string>
+    <string name="game_show_board">Ver el tablero</string>
+    <string name="game_hide_board">Ocultar el tablero</string>
+    <string name="game_draw">Tablas</string>
+    <string name="game_resign">Abandonar</string>
+    <string name="game_abort">Anular</string>
+    <!-- La jugada en notación algebraica. -->
+    <string name="game_opponent_played">El rival ha jugado %1$s</string>
+    <string name="game_replay_on_board">Repítela en tu tablero, haz tu jugada y toca.</string>
+    <string name="game_desync_title">El tablero no coincide</string>
+    <string name="game_dismiss">Descartar</string>
+    <string name="game_promotion_question">¿A qué pieza has coronado?</string>
+    <string name="game_disambiguation_title">¿Qué jugada has hecho?</string>
+    <string name="game_disambiguation_explanation">La posición del tablero admite más de una jugada legal.</string>
+    <string name="game_draw_offered_title">Oferta de tablas</string>
+    <!-- Quién las ofrece: un nombre, un color o "tu rival". -->
+    <string name="game_draw_offered">%1$s ofrece tablas.</string>
+    <string name="game_accept">Aceptar</string>
+    <string name="game_decline">Rechazar</string>
+    <string name="game_over_title">Fin de la partida</string>
+    <string name="game_moves_played">%1$d jugadas</string>
+    <string name="game_done">Hecho</string>
+
+    <!-- Nombres de las piezas, para el lector de pantalla y el diálogo de coronación. -->
+    <string name="piece_name_pawn">Peón</string>
+    <string name="piece_name_knight">Caballo</string>
+    <string name="piece_name_bishop">Alfil</string>
+    <string name="piece_name_rook">Torre</string>
+    <string name="piece_name_queen">Dama</string>
+    <string name="piece_name_king">Rey</string>
+    <!-- Color, pieza y casilla, leídos por el lector de pantalla. -->
+    <string name="board_piece_on_square">%2$s %1$s en %3$s</string>
 </resources>

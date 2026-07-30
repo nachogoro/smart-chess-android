@@ -147,4 +147,44 @@
     <string name="board_detects_occupancy">occupancy</string>
     <string name="board_detects_colour">piece colour</string>
     <string name="board_detects_piece_type">full piece type</string>
+
+    <!-- In-game screen -->
+    <string name="game_waiting">Waiting\u2026</string>
+    <string name="game_seeking">Looking for an opponent\u2026</string>
+    <string name="game_engine_thinking">Engine is thinking\u2026</string>
+    <!-- Whose turn it is: White or Black. -->
+    <string name="game_to_move">%1$s to move</string>
+    <string name="game_waiting_for">Waiting for %1$s\u2026</string>
+    <string name="game_move_then_tap">Move on the board, then tap anywhere</string>
+    <string name="game_show_board">Show board</string>
+    <string name="game_hide_board">Hide board</string>
+    <string name="game_draw">Draw</string>
+    <string name="game_resign">Resign</string>
+    <string name="game_abort">Abort</string>
+    <!-- The move in algebraic notation. -->
+    <string name="game_opponent_played">Opponent played %1$s</string>
+    <string name="game_replay_on_board">Play it on your board, make your reply, then tap.</string>
+    <string name="game_desync_title">Board out of sync</string>
+    <string name="game_dismiss">Dismiss</string>
+    <string name="game_promotion_question">Which piece did you promote to?</string>
+    <string name="game_disambiguation_title">Which move did you play?</string>
+    <string name="game_disambiguation_explanation">The board position matches more than one legal move.</string>
+    <string name="game_draw_offered_title">Draw offered</string>
+    <!-- Who offered: a player\'s name, a colour, or "your opponent". -->
+    <string name="game_draw_offered">%1$s offers a draw.</string>
+    <string name="game_accept">Accept</string>
+    <string name="game_decline">Decline</string>
+    <string name="game_over_title">Game over</string>
+    <string name="game_moves_played">%1$d moves played</string>
+    <string name="game_done">Done</string>
+
+    <!-- Piece names, for the board\'s screen reader descriptions and the promotion dialog. -->
+    <string name="piece_name_pawn">Pawn</string>
+    <string name="piece_name_knight">Knight</string>
+    <string name="piece_name_bishop">Bishop</string>
+    <string name="piece_name_rook">Rook</string>
+    <string name="piece_name_queen">Queen</string>
+    <string name="piece_name_king">King</string>
+    <!-- Colour, piece and square, read out by a screen reader. -->
+    <string name="board_piece_on_square">%1$s %2$s on %3$s</string>
 </resources>
