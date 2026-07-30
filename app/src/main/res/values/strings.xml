@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Smart Chess</string>
+    <!-- The product name; the same in every language (see the workspace CLAUDE.md). -->
+    <string name="app_name" translatable="false">Smart Chess</string>
 
     <!--
       Spoken announcement of the opponent's move.
