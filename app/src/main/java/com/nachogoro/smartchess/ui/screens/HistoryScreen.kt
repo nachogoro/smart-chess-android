@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -147,7 +148,7 @@ private fun GameRow(game: GameRecord, onClick: () -> Unit) {
                     LIST_DATE_FORMAT.format(Date(game.playedAt)),
                     game.mode.lowercase(Locale.ROOT),
                     "${game.moves.size} moves",
-                    game.termination().describe(),
+                    game.termination().describe(LocalContext.current),
                 ).joinToString(" - "),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -179,7 +180,7 @@ private fun GameDetail(game: GameRecord, onDelete: () -> Unit, onBack: () -> Uni
         Spacer(Modifier.height(4.dp))
         Text(
             "${LIST_DATE_FORMAT.format(Date(game.playedAt))} - ${game.mode.lowercase(Locale.ROOT)} - " +
-                "${game.result.ifBlank { "*" }} (${game.termination().describe()})",
+                "${game.result.ifBlank { "*" }} (${game.termination().describe(LocalContext.current)})",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

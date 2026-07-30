@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
@@ -337,7 +338,7 @@ private fun NotificationArea(uiModule: AndroidUIModule) {
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
                 Text(
-                    desync.message.describe(),
+                    desync.message.describe(LocalContext.current),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
@@ -356,7 +357,7 @@ private fun NotificationArea(uiModule: AndroidUIModule) {
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
-                    error.describe(),
+                    error.describe(LocalContext.current),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
@@ -421,7 +422,7 @@ private fun GameDialogs(uiModule: AndroidUIModule, onGameEnd: () -> Unit) {
         AlertDialog(
             onDismissRequest = { request.complete(false) },
             title = { Text("Draw offered") },
-            text = { Text("${request.input.describe()} offers a draw.") },
+            text = { Text("${request.input.describe(LocalContext.current)} offers a draw.") },
             confirmButton = { Button(onClick = { request.complete(true) }) { Text("Accept") } },
             dismissButton = {
                 OutlinedButton(onClick = { request.complete(false) }) { Text("Decline") }
@@ -437,7 +438,7 @@ private fun GameDialogs(uiModule: AndroidUIModule, onGameEnd: () -> Unit) {
                 Column {
                     Text(summary.result.protocolString, style = MaterialTheme.typography.headlineSmall)
                     Spacer(Modifier.height(8.dp))
-                    Text(summary.termination.describe(), style = MaterialTheme.typography.bodyMedium)
+                    Text(summary.termination.describe(LocalContext.current), style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "${summary.moves.size} moves played",

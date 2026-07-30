@@ -1,8 +1,8 @@
 package com.nachogoro.smartchess.ui
 
+import android.content.Context
+import com.nachogoro.smartchess.R
 import scp.protocol.BoardError
-import scp.protocol.Color
-import scp.protocol.DrawOffer
 import scp.protocol.ModuleError
 import scp.protocol.UIMessage
 
@@ -10,44 +10,52 @@ import scp.protocol.UIMessage
  * A message from the orchestrator, in words.
  *
  * The wording lives here because the UI module is the only one that knows who is reading
- * (PROTOCOL.md §2.6). These are still English literals like the rest of the app's text; what
- * changed is that choosing them is now this layer's job.
+ * (PROTOCOL.md §2.6).
  */
-fun UIMessage.describe(): String = when (this) {
-    is UIMessage.BoardReadFailed -> readFailureText(error)
-    UIMessage.BoardUnchanged -> "The board has not changed. Move a piece, then tap again."
-    UIMessage.NoLegalMoveMatches -> "The board does not match any legal move."
-    UIMessage.EngineCapabilitiesUnavailable -> "Could not read the engine's capabilities."
-    UIMessage.RemoteCapabilitiesUnavailable -> "Could not read the platform's capabilities."
-    UIMessage.DrawNotSupportedByEngine -> "The engine does not take draw offers."
-    is UIMessage.BoardFailed -> "Board error." withDetail error
-    is UIMessage.BoardCapabilitiesUnavailable -> "Could not read the board." withDetail error
-    is UIMessage.EngineConfigurationFailed -> "The engine would not take those settings." withDetail error
-    is UIMessage.RemoteConfigurationFailed -> "The platform would not take those settings." withDetail error
-    is UIMessage.SeekFailed -> "Could not look for an opponent." withDetail error
-    is UIMessage.MoveRejected -> "That move was rejected." withDetail error
-    is UIMessage.OpponentMoveRejected -> "The opponent's move was rejected." withDetail error
-    is UIMessage.EngineMoveRejected -> "The engine's move was rejected." withDetail error
-    is UIMessage.MoveNotSent -> "Your move could not be sent to the server." withDetail error
-    is UIMessage.EngineFailed -> "Engine error." withDetail error
-    is UIMessage.RemoteFailed -> "Remote error." withDetail error
-    is UIMessage.GameCreationFailed -> "The game could not be started." withDetail error
+fun UIMessage.describe(context: Context): String = when (this) {
+    is UIMessage.BoardReadFailed -> context.readFailureText(error)
+    UIMessage.BoardUnchanged -> context.getString(R.string.msg_board_unchanged)
+    UIMessage.NoLegalMoveMatches -> context.getString(R.string.msg_no_legal_move_matches)
+    UIMessage.EngineCapabilitiesUnavailable ->
+        context.getString(R.string.msg_engine_capabilities_unavailable)
+    UIMessage.RemoteCapabilitiesUnavailable ->
+        context.getString(R.string.msg_remote_capabilities_unavailable)
+    UIMessage.DrawNotSupportedByEngine -> context.getString(R.string.msg_draw_not_supported)
+
+    is UIMessage.BoardFailed -> context.withDetail(R.string.msg_board_failed, error)
+    is UIMessage.BoardCapabilitiesUnavailable ->
+        context.withDetail(R.string.msg_board_capabilities_unavailable, error)
+    is UIMessage.EngineConfigurationFailed ->
+        context.withDetail(R.string.msg_engine_configuration_failed, error)
+    is UIMessage.RemoteConfigurationFailed ->
+        context.withDetail(R.string.msg_remote_configuration_failed, error)
+    is UIMessage.SeekFailed -> context.withDetail(R.string.msg_seek_failed, error)
+    is UIMessage.MoveRejected -> context.withDetail(R.string.msg_move_rejected, error)
+    is UIMessage.OpponentMoveRejected ->
+        context.withDetail(R.string.msg_opponent_move_rejected, error)
+    is UIMessage.EngineMoveRejected -> context.withDetail(R.string.msg_engine_move_rejected, error)
+    is UIMessage.MoveNotSent -> context.withDetail(R.string.msg_move_not_sent, error)
+    is UIMessage.EngineFailed -> context.withDetail(R.string.msg_engine_failed, error)
+    is UIMessage.RemoteFailed -> context.withDetail(R.string.msg_remote_failed, error)
+    is UIMessage.GameCreationFailed -> context.withDetail(R.string.msg_game_creation_failed, error)
+
     // The diagnostic is deliberately absent: it is a Kotlin exception message, which belongs in
     // the log and not in front of a player.
-    is UIMessage.UnexpectedFailure -> "Something went wrong."
-    // Nothing here recognises this one, so whatever wording came with it beats inventing some.
-    is UIMessage.Other -> text ?: authorityCode ?: "Something went wrong."
+    is UIMessage.UnexpectedFailure -> context.getString(R.string.msg_unexpected_failure)
+    // Nothing here recognises this one, so whatever wording came with it beats inventing some -
+    // and it came from outside, so it is not ours to translate either.
+    is UIMessage.Other -> text ?: authorityCode ?: context.getString(R.string.msg_unexpected_failure)
 }
 
 /**
- * The failing module's code, as detail beside this app's own wording.
+ * This app's wording, with the failing module's code appended.
  *
- * The code rather than the module's `message`: that field is developer-facing (§2.6) and is
+ * The code rather than the module's `diagnostic`: that field is developer-facing (§2.6) and is
  * English written elsewhere, so showing it would put a fragment in front of the player that no
- * translation of this app could ever reach. The code at least means something to whoever is
- * reading a bug report.
+ * translation of this app could reach. A code at least means something in a bug report.
  */
-private infix fun String.withDetail(error: ModuleError) = "$this (${error.code})"
+private fun Context.withDetail(wording: Int, error: ModuleError): String =
+    getString(R.string.msg_with_detail, getString(wording), error.code)
 
 /**
  * A failed board read, said as usefully as the error allows.
@@ -56,30 +64,20 @@ private infix fun String.withDetail(error: ModuleError) = "$this (${error.code})
  * to look - which is the whole reason the board module reports them as a list rather than keeping
  * the sentence to itself.
  */
-private fun readFailureText(error: ModuleError): String {
+private fun Context.readFailureText(error: ModuleError): String {
     val squares = (error as? BoardError.SensorFailure)?.unreadableSquares.orEmpty()
     return when {
-        squares.isEmpty() -> "Could not read the board." withDetail error
-        squares.size == 1 ->
-            "Could not read square ${squares.single()}. Re-seat the piece and try again."
+        squares.isEmpty() -> withDetail(R.string.msg_board_read_failed, error)
+        squares.size == 1 -> getString(R.string.msg_unreadable_square, squares.single())
         // Enough to act on without becoming a wall of coordinates.
-        squares.size <= 6 ->
-            "Could not read squares ${squares.joinToString(", ")}. Re-seat the pieces and try again."
-        else ->
-            "Could not read ${squares.size} squares, including " +
-                "${squares.take(6).joinToString(", ")}. Re-seat the pieces and try again."
+        squares.size <= MAX_SQUARES_LISTED ->
+            getString(R.string.msg_unreadable_squares, squares.joinToString(", "))
+        else -> getString(
+            R.string.msg_unreadable_squares_truncated,
+            squares.size,
+            squares.take(MAX_SQUARES_LISTED).joinToString(", "),
+        )
     }
 }
 
-/**
- * Who offered a draw, in words.
- *
- * Their name if there is one, since it is theirs and not ours to translate; otherwise the colour,
- * and failing that the opponent. The core sends what it knows and leaves the sentence here.
- */
-fun DrawOffer.describe(): String =
-    name ?: when (color) {
-        Color.WHITE -> "White"
-        Color.BLACK -> "Black"
-        null -> "Your opponent"
-    }
+private const val MAX_SQUARES_LISTED = 6

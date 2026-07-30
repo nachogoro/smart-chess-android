@@ -1,36 +1,50 @@
 package com.nachogoro.smartchess.ui
 
+import android.content.Context
+import com.nachogoro.smartchess.R
 import scp.protocol.DrawKind
+import scp.protocol.DrawOffer
 import scp.protocol.Termination
 
 /**
  * How a game ended, in words.
  *
  * The wording lives here because the UI module is the only one allowed to write it: every other
- * SCP module reports a code, since none of them can know who is reading (PROTOCOL.md §2.6). These
- * are still English literals like the rest of the app's text; what has changed is that choosing
- * them is now this layer's job, which is what makes translating them possible later.
+ * SCP module reports a code, since none of them can know who is reading (PROTOCOL.md §2.6).
  */
-fun Termination.describe(): String = when (this) {
-    Termination.Checkmate -> "Checkmate"
-    Termination.Stalemate -> "Stalemate"
-    Termination.Resignation -> "Resignation"
-    Termination.Timeout -> "Out of time"
-    Termination.Aborted -> "Aborted"
-    is Termination.Drawn -> kind.describe()
+fun Termination.describe(context: Context): String = when (this) {
+    Termination.Checkmate -> context.getString(R.string.termination_checkmate)
+    Termination.Stalemate -> context.getString(R.string.termination_stalemate)
+    Termination.Resignation -> context.getString(R.string.termination_resignation)
+    Termination.Timeout -> context.getString(R.string.termination_timeout)
+    Termination.Aborted -> context.getString(R.string.termination_aborted)
+    is Termination.Drawn -> kind.describe(context)
     // Whoever ended the game named something this build does not know. Their own words, or failing
-    // that their identifier, beats inventing a reason for them.
-    is Termination.Other -> text ?: authorityCode ?: "Unknown"
+    // that their identifier, beats inventing a reason for them - and neither is ours to translate.
+    is Termination.Other -> text ?: authorityCode ?: context.getString(R.string.termination_unknown)
 }
 
-private fun DrawKind.describe(): String = when (this) {
-    DrawKind.Agreement -> "Draw by agreement"
-    DrawKind.InsufficientMaterial -> "Draw, insufficient material"
-    DrawKind.FiftyMoveRule -> "Draw, fifty-move rule"
-    DrawKind.SeventyFiveMoveRule -> "Draw, 75-move rule"
-    DrawKind.ThreefoldRepetition -> "Draw, threefold repetition"
-    DrawKind.FivefoldRepetition -> "Draw, fivefold repetition"
+private fun DrawKind.describe(context: Context): String = when (this) {
+    DrawKind.Agreement -> context.getString(R.string.draw_agreement)
+    DrawKind.InsufficientMaterial -> context.getString(R.string.draw_insufficient_material)
+    DrawKind.FiftyMoveRule -> context.getString(R.string.draw_fifty_move_rule)
+    DrawKind.SeventyFiveMoveRule -> context.getString(R.string.draw_seventy_five_move_rule)
+    DrawKind.ThreefoldRepetition -> context.getString(R.string.draw_threefold_repetition)
+    DrawKind.FivefoldRepetition -> context.getString(R.string.draw_fivefold_repetition)
     // The rule is unnamed, but it was still a draw - which is why the kind nests inside the
     // termination rather than replacing it.
-    is DrawKind.Other -> "Draw"
+    is DrawKind.Other -> context.getString(R.string.draw_unspecified)
 }
+
+/**
+ * Who offered a draw, in words.
+ *
+ * Their name if there is one, since it is theirs and not ours to translate; otherwise the colour,
+ * and failing that the opponent. The core sends what it knows and leaves the sentence here.
+ */
+fun DrawOffer.describe(context: Context): String =
+    name ?: when (color) {
+        scp.protocol.Color.WHITE -> context.getString(R.string.color_white)
+        scp.protocol.Color.BLACK -> context.getString(R.string.color_black)
+        null -> context.getString(R.string.draw_offer_opponent)
+    }

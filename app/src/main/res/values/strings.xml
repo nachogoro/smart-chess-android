@@ -40,4 +40,55 @@
     <string name="piece_rook">Rook</string>
     <string name="piece_queen">Queen</string>
     <string name="piece_king">King</string>
+
+    <!-- How a game ended, shown at the end of a game and in the history. -->
+    <string name="termination_checkmate">Checkmate</string>
+    <string name="termination_stalemate">Stalemate</string>
+    <string name="termination_resignation">Resignation</string>
+    <string name="termination_timeout">Out of time</string>
+    <string name="termination_aborted">Aborted</string>
+    <string name="termination_unknown">Unknown</string>
+    <string name="draw_agreement">Draw by agreement</string>
+    <string name="draw_insufficient_material">Draw, insufficient material</string>
+    <string name="draw_fifty_move_rule">Draw, fifty-move rule</string>
+    <string name="draw_seventy_five_move_rule">Draw, 75-move rule</string>
+    <string name="draw_threefold_repetition">Draw, threefold repetition</string>
+    <string name="draw_fivefold_repetition">Draw, fivefold repetition</string>
+    <string name="draw_unspecified">Draw</string>
+
+    <string name="color_white">White</string>
+    <string name="color_black">Black</string>
+    <string name="draw_offer_opponent">Your opponent</string>
+
+    <!--
+      Messages the orchestrator reports as codes. The app chooses the words; the module that
+      raised them cannot know what language the player reads.
+    -->
+    <string name="msg_board_unchanged">The board has not changed. Move a piece, then tap again.</string>
+    <string name="msg_no_legal_move_matches">The board does not match any legal move.</string>
+    <string name="msg_engine_capabilities_unavailable">Could not read the engine\'s capabilities.</string>
+    <string name="msg_remote_capabilities_unavailable">Could not read the platform\'s capabilities.</string>
+    <string name="msg_draw_not_supported">The engine does not take draw offers.</string>
+    <string name="msg_board_failed">Board error.</string>
+    <string name="msg_board_read_failed">Could not read the board.</string>
+    <string name="msg_board_capabilities_unavailable">Could not read the board.</string>
+    <string name="msg_engine_configuration_failed">The engine would not take those settings.</string>
+    <string name="msg_remote_configuration_failed">The platform would not take those settings.</string>
+    <string name="msg_seek_failed">Could not look for an opponent.</string>
+    <string name="msg_move_rejected">That move was rejected.</string>
+    <string name="msg_opponent_move_rejected">The opponent\'s move was rejected.</string>
+    <string name="msg_engine_move_rejected">The engine\'s move was rejected.</string>
+    <string name="msg_move_not_sent">Your move could not be sent to the server.</string>
+    <string name="msg_engine_failed">Engine error.</string>
+    <string name="msg_remote_failed">Remote error.</string>
+    <string name="msg_game_creation_failed">The game could not be started.</string>
+    <string name="msg_unexpected_failure">Something went wrong.</string>
+    <!-- The message, and the failing module's error code for a bug report. -->
+    <string name="msg_with_detail">%1$s (%2$s)</string>
+    <!-- One square the board could not read. -->
+    <string name="msg_unreadable_square">Could not read square %1$s. Re-seat the piece and try again.</string>
+    <!-- A short list of squares. -->
+    <string name="msg_unreadable_squares">Could not read squares %1$s. Re-seat the pieces and try again.</string>
+    <!-- How many squares in total, then the first few. -->
+    <string name="msg_unreadable_squares_truncated">Could not read %1$d squares, including %2$s. Re-seat the pieces and try again.</string>
 </resources>

@@ -1,6 +1,6 @@
 package com.nachogoro.smartchess.data
 
-import com.nachogoro.smartchess.ui.describe
+import scp.protocol.Termination
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -25,7 +25,7 @@ fun GameRecord.toPgn(): String {
 
         // Optional tags, only when they carry something.
         timeControl?.let { add("TimeControl" to it.toPgnTimeControl()) }
-        add("Termination" to termination().describe())
+        add("Termination" to termination().toPgnTermination())
     }
 
     val header = tags.joinToString("\n") { (name, value) ->
@@ -83,3 +83,24 @@ private const val MAX_LINE_LENGTH = 80
 
 // PGN dates are yyyy.mm.dd. Locale.ROOT keeps the digits Western regardless of device locale.
 private val PGN_DATE_FORMAT = SimpleDateFormat("yyyy.MM.dd", Locale.ROOT)
+
+/**
+ * The PGN `Termination` tag, from the standard's own vocabulary.
+ *
+ * Not the wording shown on screen: a PGN file is read by other tools, so the tag has to say what
+ * the format says it says, in the format's language, whatever the app is set to. That the two
+ * happen to be English today is a coincidence worth not relying on.
+ *
+ * The standard's values are coarser than ours - checkmate, resignation and a draw are all a game
+ * that ended "normal" - but the detail is recoverable from the moves and the result, which is
+ * presumably why it settled there.
+ */
+private fun Termination.toPgnTermination(): String = when (this) {
+    Termination.Timeout -> "time forfeit"
+    Termination.Aborted -> "abandoned"
+    Termination.Checkmate,
+    Termination.Stalemate,
+    Termination.Resignation,
+    is Termination.Drawn -> "normal"
+    is Termination.Other -> "unterminated"
+}

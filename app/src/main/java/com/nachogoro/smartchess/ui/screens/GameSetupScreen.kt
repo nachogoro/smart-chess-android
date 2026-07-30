@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.nachogoro.smartchess.data.AppSettings
@@ -214,7 +215,7 @@ private fun LocalGameForm(
     )
     Spacer(Modifier.height(20.dp))
 
-    SetupErrorBanner(errorMessage?.describe())
+    SetupErrorBanner(errorMessage?.describe(LocalContext.current))
 
     OutlinedTextField(
         value = whiteName,
@@ -317,7 +318,7 @@ private fun EngineGameForm(
 
     // The orchestrator re-prompts with an error when the adapter rejects a configuration, so both
     // that and local validation surface in the same place.
-    SetupErrorBanner(params.errorMessage?.describe() ?: validationError)
+    SetupErrorBanner(params.errorMessage?.describe(LocalContext.current) ?: validationError)
 
     Text("Play as", style = MaterialTheme.typography.titleMedium)
     Spacer(Modifier.height(8.dp))
@@ -402,7 +403,7 @@ private fun RemoteGameForm(
     )
     Spacer(Modifier.height(20.dp))
 
-    SetupErrorBanner(params.errorMessage?.describe() ?: validationError)
+    SetupErrorBanner(params.errorMessage?.describe(LocalContext.current) ?: validationError)
 
     if (params.parameters.isNotEmpty()) {
         Text("Account", style = MaterialTheme.typography.titleMedium)
