@@ -72,9 +72,10 @@ fun ConnectionScreen(
         ActivityResultContracts.StartActivityForResult()
     ) { refreshRequirements() }
 
-    // Navigate onwards as soon as the board is usable.
+    // Navigate onwards as soon as the board is usable. An idle link still counts: the board is
+    // identified, and the first read of the game reconnects it.
     LaunchedEffect(state) {
-        if (state is BoardConnectionState.Ready) onConnected()
+        if (state is BoardConnectionState.Identified) onConnected()
     }
 
     val ready = permissionsGranted && bluetoothEnabled && locationEnabled
@@ -85,7 +86,7 @@ fun ConnectionScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         when {
-            state is BoardConnectionState.Ready -> Icon(
+            state is BoardConnectionState.Identified -> Icon(
                 Icons.Default.CheckCircle,
                 contentDescription = null,
                 modifier = Modifier.size(72.dp),
@@ -124,7 +125,7 @@ fun ConnectionScreen(
             state is BoardConnectionState.Connecting ->
                 "Connecting to ${state.deviceName ?: "the board"}..."
 
-            state is BoardConnectionState.Ready ->
+            state is BoardConnectionState.Identified ->
                 "Connected to ${state.deviceName ?: "the board"}."
 
             !permissionsGranted ->

@@ -41,7 +41,9 @@ fun MainMenuScreen(
     onSettings: () -> Unit,
     onReconnect: () -> Unit,
 ) {
-    val boardReady = connectionState is BoardConnectionState.Ready
+    // Identified, not Ready: the link is down between moves by design, and the next board read
+    // reconnects. Gating play on a live link would disable the menu every 30 idle seconds.
+    val boardReady = connectionState is BoardConnectionState.Identified
 
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -88,7 +90,9 @@ fun MainMenuScreen(
 
 @Composable
 private fun BoardStatusChip(state: BoardConnectionState, onReconnect: () -> Unit) {
-    val connected = state is BoardConnectionState.Ready
+    // The link flaps every 30s while idle. Reporting that as connect/disconnect churn would be
+    // noise, so the chip tracks whether a board is paired at all.
+    val connected = state is BoardConnectionState.Identified
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = if (connected) Icons.Default.Bluetooth else Icons.Default.BluetoothDisabled,
@@ -99,7 +103,7 @@ private fun BoardStatusChip(state: BoardConnectionState, onReconnect: () -> Unit
         Spacer(Modifier.width(6.dp))
         Text(
             text = when (state) {
-                is BoardConnectionState.Ready -> state.deviceName ?: "Board connected"
+                is BoardConnectionState.Identified -> state.deviceName ?: "Board connected"
                 is BoardConnectionState.Failed -> "Board disconnected"
                 else -> "No board"
             },

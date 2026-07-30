@@ -75,7 +75,7 @@ fun SettingsScreen(
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 when (connectionState) {
-                    is BoardConnectionState.Ready -> {
+                    is BoardConnectionState.Identified -> {
                         val caps = connectionState.capabilities
                         Text(connectionState.deviceName ?: "Connected board")
                         Spacer(Modifier.height(4.dp))

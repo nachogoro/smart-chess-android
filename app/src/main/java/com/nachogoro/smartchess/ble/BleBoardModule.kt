@@ -29,14 +29,18 @@ class BleBoardModule(
     override val errors: SharedFlow<BoardErrorEvent> = _errors
 
     override suspend fun getCapabilities(): Result<BoardError, BoardCapabilities> {
-        val ready = connection.state.value as? BoardConnectionState.Ready
+        // Read from the identified board rather than from a live link. The link is down between
+        // moves by design, and what the board is capable of does not change while it idles.
+        val caps = connection.capabilities
             ?: return Result.Failure(BoardError.Disconnected())
 
-        return Result.Success(BoardCapabilities(ready.capabilities.toCapabilityLevel()))
+        return Result.Success(BoardCapabilities(caps.toCapabilityLevel()))
     }
 
     override suspend fun getState(): Result<BoardError, BoardState> {
-        if (!connection.isReady) {
+        // Gate on knowing which board to talk to, not on the link being up: the read below
+        // reconnects if needed.
+        if (!connection.isBoardKnown) {
             return Result.Failure(BoardError.Disconnected())
         }
 

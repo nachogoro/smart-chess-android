@@ -33,10 +33,34 @@ sealed interface BoardConnectionState {
     data object Idle : BoardConnectionState
     data object Scanning : BoardConnectionState
     data class Connecting(val deviceName: String?) : BoardConnectionState
+    /**
+     * A board that has been found and validated.
+     *
+     * Whether the link is up right now is a detail of BLE power management, not something a caller
+     * deciding "can we play?" should have to reason about, so both live and idle links share this
+     * type.
+     */
+    sealed interface Identified : BoardConnectionState {
+        val deviceName: String?
+        val capabilities: BoardCapabilitiesPacket
+    }
+
     data class Ready(
-        val deviceName: String?,
-        val capabilities: BoardCapabilitiesPacket,
-    ) : BoardConnectionState
+        override val deviceName: String?,
+        override val capabilities: BoardCapabilitiesPacket,
+    ) : Identified
+
+    /**
+     * The board is identified but the link is down, which is the routine state between moves.
+     *
+     * A game reads the board minutes apart and the link is torn down within about 30s of the last
+     * operation, so this is not an error: the next read reconnects to the remembered board. Kept
+     * distinct from [Failed] so the UI does not present ordinary idling as something to fix.
+     */
+    data class Disconnected(
+        override val deviceName: String?,
+        override val capabilities: BoardCapabilitiesPacket,
+    ) : Identified
 
     /** Terminal-ish: the user is expected to retry. [recoverable] drives whether we offer that. */
     data class Failed(val reason: String, val recoverable: Boolean = true) : BoardConnectionState
@@ -83,7 +107,27 @@ class BleBoardConnection(context: Context) {
     @Volatile
     private var scanCallback: ScanCallback? = null
 
+    /**
+     * The board once it has been identified, retained across disconnections.
+     *
+     * Remembering the device is what lets a reconnect skip the scan, and remembering the
+     * capabilities is what lets callers ask about the board while the link happens to be down -
+     * they are static metadata, not a live reading.
+     */
+    @Volatile
+    private var knownDevice: BluetoothDevice? = null
+
+    @Volatile
+    private var knownCapabilities: BoardCapabilitiesPacket? = null
+
+    /** True only while the link is actually up. */
     val isReady: Boolean get() = _state.value is BoardConnectionState.Ready
+
+    /** True once a board has been identified, whether or not the link is currently up. */
+    val isBoardKnown: Boolean get() = knownDevice != null && knownCapabilities != null
+
+    /** Capabilities of the identified board, available even while disconnected. */
+    val capabilities: BoardCapabilitiesPacket? get() = knownCapabilities
 
     /** True when Bluetooth exists on the device and is currently switched on. */
     fun isBluetoothEnabled(): Boolean = adapter?.isEnabled == true
@@ -105,6 +149,12 @@ class BleBoardConnection(context: Context) {
             return fail("Bluetooth is switched off")
         }
 
+        // A board already identified can be re-reached directly; scanning again would cost seconds
+        // and, on a failed scan, the full timeout.
+        if (isBoardKnown && reconnectToKnownBoard()) {
+            return Result.success(Unit)
+        }
+
         return try {
             _state.value = BoardConnectionState.Scanning
             val device = withTimeout(scanTimeoutMs) { scanForBoard() }
@@ -115,11 +165,18 @@ class BleBoardConnection(context: Context) {
             val capsBytes = readCharacteristic(BoardBle.CAPABILITIES_UUID)
             when (val caps = parseCapabilities(capsBytes)) {
                 is PacketResult.Invalid -> {
+                    // The byte count alone rarely identifies the firmware; the hex does.
+                    Log.w(
+                        TAG,
+                        "Rejected Capabilities (${capsBytes.size} bytes): ${capsBytes.toHex()}"
+                    )
                     close()
                     fail("Incompatible board: ${caps.reason}")
                 }
 
                 is PacketResult.Ok -> {
+                    knownDevice = device
+                    knownCapabilities = caps.value
                     _state.value = BoardConnectionState.Ready(device.safeName(), caps.value)
                     Result.success(Unit)
                 }
@@ -161,11 +218,11 @@ class BleBoardConnection(context: Context) {
         pendingRead = null
         pendingConnection?.cancel()
         pendingConnection = null
-        gatt?.let {
-            runCatching { it.disconnect() }
-            runCatching { it.close() }
-        }
-        gatt = null
+        discardGatt()
+        // A deliberate teardown also forgets the board: the next connect should discover afresh
+        // rather than reconnect to whatever was in range last time the app ran.
+        knownDevice = null
+        knownCapabilities = null
         if (_state.value !is BoardConnectionState.Failed) {
             _state.value = BoardConnectionState.Idle
         }
@@ -240,12 +297,74 @@ class BleBoardConnection(context: Context) {
     }
 
     /**
-     * Performs a characteristic read, serialised against any other GATT operation.
+     * Performs a characteristic read, serialised against any other GATT operation, reconnecting
+     * first if the link has gone away.
      *
-     * Reads before service discovery completes fail silently on Android, hence the explicit
-     * service lookup and the [BoardConnectionState] gating in [connect].
+     * Reads before service discovery completes fail silently on Android, hence the explicit service
+     * lookup in [readLocked] rather than trusting the link to be usable.
      */
     private suspend fun readCharacteristic(uuid: UUID): ByteArray = opMutex.withLock {
+        ensureConnected()
+        try {
+            readLocked(uuid)
+        } catch (first: BleOperationException) {
+            // A link that died while idle only reveals itself when the next read is attempted, so
+            // one reconnect-and-retry turns the expected case into a slower read rather than a
+            // failure the caller has to interpret.
+            if (!isBoardKnown) throw first
+            Log.i(TAG, "Read of $uuid failed (${first.message}); reconnecting once")
+            discardGatt()
+            ensureConnected()
+            readLocked(uuid)
+        }
+    }
+
+    /**
+     * Brings the link up if it is down, reusing the remembered board.
+     *
+     * Callers must hold [opMutex]: reconnecting is a GATT operation like any other, and two reads
+     * arriving together must not each start their own connection.
+     */
+    private suspend fun ensureConnected() {
+        if (gatt != null) return
+
+        val device = knownDevice ?: throw BleOperationException("Board is not connected")
+        val caps = knownCapabilities ?: throw BleOperationException("Board is not connected")
+
+        Log.i(TAG, "Reconnecting to remembered board ${device.address}")
+        // Deliberately not published as Connecting: a reconnect happens on the way to serving a
+        // read, and announcing it would make the UI flicker between "no board" and "connected"
+        // around every move. The manual path shows its own progress from the view model.
+        try {
+            connectGatt(device)
+        } catch (e: Exception) {
+            // connectGatt assigns the GATT client before awaiting discovery, so a failed attempt
+            // would otherwise leave a half-open one behind for the next read to trust.
+            discardGatt()
+            throw e
+        }
+        // Capabilities are static, so the reconnect does not re-read them.
+        _state.value = BoardConnectionState.Ready(device.safeName(), caps)
+    }
+
+    /** Reconnect attempt for [connect]; returns whether the link came back up. */
+    private suspend fun reconnectToKnownBoard(): Boolean = opMutex.withLock {
+        discardGatt()
+        runCatching { ensureConnected() }
+            .onFailure { Log.i(TAG, "Reconnect failed (${it.message}); falling back to a scan") }
+            .isSuccess
+    }
+
+    /** Releases the GATT client without touching [_state] or the remembered board. */
+    private fun discardGatt() {
+        gatt?.let {
+            runCatching { it.disconnect() }
+            runCatching { it.close() }
+        }
+        gatt = null
+    }
+
+    private suspend fun readLocked(uuid: UUID): ByteArray {
         val gatt = gatt ?: throw BleOperationException("Board is not connected")
         val service = gatt.getService(BoardBle.SERVICE_UUID)
             ?: throw BleOperationException("Board service not found")
@@ -260,13 +379,18 @@ class BleBoardConnection(context: Context) {
             throw BleOperationException("Could not start read of $uuid")
         }
 
-        try {
+        val value = try {
             withTimeout(10_000) { deferred.await() }
         } catch (_: TimeoutCancellationException) {
             throw BleOperationException("Timed out reading from the board")
         } finally {
             pendingRead = null
         }
+
+        // The board's wire format is the one part of this integration that cannot be checked
+        // against source, only against the device, so every read stays traceable.
+        Log.d(TAG, "Read $uuid: ${value.size} bytes [${value.toHex()}]")
+        return value
     }
 
     private val gattCallback = object : BluetoothGattCallback() {
@@ -280,6 +404,8 @@ class BleBoardConnection(context: Context) {
 
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     val wasReady = _state.value is BoardConnectionState.Ready
+                    // status distinguishes a board-initiated idle drop from a link-layer failure.
+                    Log.i(TAG, "Disconnected (status=$status, wasReady=$wasReady)")
                     pendingRead?.completeExceptionally(
                         BleOperationException("Board disconnected")
                     )
@@ -293,7 +419,16 @@ class BleBoardConnection(context: Context) {
                     this@BleBoardConnection.gatt = null
 
                     if (wasReady) {
-                        _state.value = BoardConnectionState.Failed("Board disconnected")
+                        val device = knownDevice
+                        val caps = knownCapabilities
+                        // Measured on a Pixel 10: the link is torn down about 29s after the last
+                        // operation. Since a game reads the board minutes apart, a drop is the
+                        // normal resting state, not a fault - the next read reconnects.
+                        _state.value = if (device != null && caps != null) {
+                            BoardConnectionState.Disconnected(device.safeName(), caps)
+                        } else {
+                            BoardConnectionState.Failed("Board disconnected")
+                        }
                     }
                 }
             }
@@ -347,4 +482,6 @@ class BleBoardConnection(context: Context) {
     }
 
     private fun BluetoothDevice.safeName(): String? = runCatching { name }.getOrNull()
+
+    private fun ByteArray.toHex(): String = joinToString(" ") { "%02X".format(it) }
 }
