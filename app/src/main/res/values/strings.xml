@@ -122,4 +122,29 @@
     <string name="connect_try_again">Try again</string>
     <string name="connect_find_board">Find my board</string>
     <string name="connect_continue_without">Continue without a board</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_nickname_heading">Your nickname</string>
+    <string name="settings_nickname_explanation">Used as the default player name when you start a game.</string>
+    <string name="settings_nickname_label">Nickname</string>
+    <string name="settings_language_heading">Language</string>
+    <string name="settings_language_explanation">Also the language the opponent\'s moves are read out in.</string>
+    <string name="settings_announce_heading">Speak the opponent\'s moves</string>
+    <string name="settings_announce_explanation">Reads out each move your opponent plays, so you can keep your eyes on the board.</string>
+    <string name="settings_board_heading">Board</string>
+    <string name="settings_board_unnamed">Connected board</string>
+    <!-- Protocol version, rows, columns, what the board can detect, then " - simulation mode" or nothing. -->
+    <string name="settings_board_summary">Protocol v%1$d - %2$d\u00d7%3$d - detects %4$s%5$s</string>
+    <string name="settings_board_simulation"> - simulation mode</string>
+    <string name="settings_board_none">No board connected.</string>
+    <string name="settings_modules_heading">Saved module settings</string>
+    <string name="settings_modules_explanation">Values you entered when setting up a game, remembered so you do not have to type them again.</string>
+    <string name="settings_forget">Forget</string>
+    <string name="settings_save">Save</string>
+    <string name="settings_cancel">Cancel</string>
+    <!-- What a board can tell about a square. -->
+    <string name="board_detects_occupancy">occupancy</string>
+    <string name="board_detects_colour">piece colour</string>
+    <string name="board_detects_piece_type">full piece type</string>
 </resources>

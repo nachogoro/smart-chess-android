@@ -27,8 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.nachogoro.smartchess.R
 import com.nachogoro.smartchess.ble.BoardConnectionState
 import com.nachogoro.smartchess.data.AppLanguage
 import com.nachogoro.smartchess.data.AppSettings
@@ -59,13 +61,13 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
     ) {
-        Text("Settings", style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(24.dp))
 
-        Text("Your nickname", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.settings_nickname_heading), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(4.dp))
         Text(
-            "Used as the default player name when you start a game.",
+            stringResource(R.string.settings_nickname_explanation),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -73,17 +75,17 @@ fun SettingsScreen(
         OutlinedTextField(
             value = playerName,
             onValueChange = { playerName = it },
-            label = { Text("Nickname") },
+            label = { Text(stringResource(R.string.settings_nickname_label)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(Modifier.height(24.dp))
 
-        Text("Language", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.settings_language_heading), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(4.dp))
         Text(
-            "Also the language the opponent's moves are read out in.",
+            stringResource(R.string.settings_language_explanation),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -116,11 +118,10 @@ fun SettingsScreen(
         // effect is a trap, and the Save button exists for the text field above.
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Speak the opponent's moves", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.settings_announce_heading), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Reads out each move your opponent plays, so you can keep your eyes on the " +
-                        "board.",
+                    stringResource(R.string.settings_announce_explanation),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -134,26 +135,35 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        Text("Board", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.settings_board_heading), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 when (connectionState) {
                     is BoardConnectionState.Identified -> {
                         val caps = connectionState.capabilities
-                        Text(connectionState.deviceName ?: "Connected board")
+                        Text(connectionState.deviceName ?: stringResource(R.string.settings_board_unnamed))
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "Protocol v${caps.protocolVersion} - ${caps.rows}x${caps.columns} - " +
-                                "detects ${caps.capabilityLevelLabel()}" +
-                                if (caps.simulationMode) " - simulation mode" else "",
+                            stringResource(
+                                R.string.settings_board_summary,
+                                caps.protocolVersion,
+                                caps.rows,
+                                caps.columns,
+                                caps.capabilityLevelLabel(),
+                                if (caps.simulationMode) {
+                                    stringResource(R.string.settings_board_simulation)
+                                } else {
+                                    ""
+                                },
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
 
                     else -> Text(
-                        "No board connected.",
+                        stringResource(R.string.settings_board_none),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -163,11 +173,10 @@ fun SettingsScreen(
 
         if (settings.moduleSettings.isNotEmpty()) {
             Spacer(Modifier.height(24.dp))
-            Text("Saved module settings", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_modules_heading), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(4.dp))
             Text(
-                "Values you entered when setting up a game, remembered so you do not have to " +
-                    "type them again.",
+                stringResource(R.string.settings_modules_explanation),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -185,7 +194,7 @@ fun SettingsScreen(
                         )
                         Spacer(Modifier.height(8.dp))
                         OutlinedButton(onClick = { onClearModuleSettings(moduleName) }) {
-                            Text("Forget")
+                            Text(stringResource(R.string.settings_forget))
                         }
                     }
                 }
@@ -203,22 +212,25 @@ fun SettingsScreen(
                     onBack()
                 },
                 modifier = Modifier.weight(1f).height(48.dp),
-            ) { Text("Save") }
+            ) { Text(stringResource(R.string.settings_save)) }
             Spacer(Modifier.width(12.dp))
             OutlinedButton(
                 onClick = onBack,
                 modifier = Modifier.weight(1f).height(48.dp),
-            ) { Text("Cancel") }
+            ) { Text(stringResource(R.string.settings_cancel)) }
         }
     }
 }
 
+@Composable
 private fun com.nachogoro.smartchess.ble.BoardCapabilitiesPacket.capabilityLevelLabel(): String =
-    when (capabilityLevel) {
-        1 -> "occupancy"
-        2 -> "piece colour"
-        else -> "full piece type"
-    }
+    stringResource(
+        when (capabilityLevel) {
+            1 -> R.string.board_detects_occupancy
+            2 -> R.string.board_detects_colour
+            else -> R.string.board_detects_piece_type
+        }
+    )
 
 /**
  * The language's own name, in that language.

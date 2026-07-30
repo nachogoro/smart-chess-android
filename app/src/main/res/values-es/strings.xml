@@ -114,4 +114,29 @@
     <string name="connect_try_again">Reintentar</string>
     <string name="connect_find_board">Buscar mi tablero</string>
     <string name="connect_continue_without">Continuar sin tablero</string>
+
+    <!-- Ajustes -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_nickname_heading">Tu nombre</string>
+    <string name="settings_nickname_explanation">Se usa como nombre por defecto al empezar una partida.</string>
+    <string name="settings_nickname_label">Nombre</string>
+    <string name="settings_language_heading">Idioma</string>
+    <string name="settings_language_explanation">También es el idioma en que se leen las jugadas del rival.</string>
+    <string name="settings_announce_heading">Leer las jugadas del rival</string>
+    <string name="settings_announce_explanation">Lee en voz alta cada jugada del rival, para que no apartes la vista del tablero.</string>
+    <string name="settings_board_heading">Tablero</string>
+    <string name="settings_board_unnamed">Tablero conectado</string>
+    <!-- Versión del protocolo, filas, columnas, qué detecta el tablero y " - modo simulación" o nada. -->
+    <string name="settings_board_summary">Protocolo v%1$d - %2$d\u00d7%3$d - detecta %4$s%5$s</string>
+    <string name="settings_board_simulation"> - modo simulación</string>
+    <string name="settings_board_none">No hay ningún tablero conectado.</string>
+    <string name="settings_modules_heading">Ajustes guardados de los módulos</string>
+    <string name="settings_modules_explanation">Valores que introdujiste al preparar una partida, guardados para no tener que escribirlos otra vez.</string>
+    <string name="settings_forget">Olvidar</string>
+    <string name="settings_save">Guardar</string>
+    <string name="settings_cancel">Cancelar</string>
+    <!-- Qué puede distinguir el tablero en cada casilla. -->
+    <string name="board_detects_occupancy">si está ocupada</string>
+    <string name="board_detects_colour">el color de la pieza</string>
+    <string name="board_detects_piece_type">el tipo de pieza</string>
 </resources>
