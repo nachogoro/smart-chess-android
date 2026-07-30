@@ -27,7 +27,12 @@ object BoardBle {
     const val TYPE_CAPABILITIES = 0x10
 
     const val BOARD_STATE_LENGTH = 18
-    const val CAPABILITIES_LENGTH = 10
+
+    /**
+     * Size of the Capabilities header this app reads. A board may send a longer packet; the extra
+     * bytes are not ours to interpret.
+     */
+    const val CAPABILITIES_MIN_LENGTH = 10
 }
 
 /**
@@ -55,7 +60,7 @@ sealed interface PacketResult<out T> {
     data class Invalid(val reason: String) : PacketResult<Nothing>
 }
 
-/** Decoded `Capabilities` packet (10 bytes). */
+/** Decoded `Capabilities` packet. */
 data class BoardCapabilitiesPacket(
     val protocolVersion: Int,
     val capabilityLevel: Int,
@@ -124,10 +129,20 @@ fun parseBoardState(packet: ByteArray): PacketResult<Map<String, SquareReading>>
     return PacketResult.Ok(squares)
 }
 
-/** Parses a 10-byte `Capabilities` packet and validates the fields this app depends on. */
+/**
+ * Parses a `Capabilities` packet and validates the fields this app depends on.
+ *
+ * Only the first [BoardBle.CAPABILITIES_MIN_LENGTH] bytes are read, and a longer packet is
+ * accepted: compatibility is decided by the protocol version and the field checks below, so a
+ * firmware that appends its own fields to the header is still usable. A board that genuinely does
+ * not fit is rejected on content, which says more than a byte count would.
+ */
 fun parseCapabilities(packet: ByteArray): PacketResult<BoardCapabilitiesPacket> {
-    if (packet.size != BoardBle.CAPABILITIES_LENGTH) {
-        return PacketResult.Invalid("Expected ${BoardBle.CAPABILITIES_LENGTH} bytes, got ${packet.size}")
+    if (packet.size < BoardBle.CAPABILITIES_MIN_LENGTH) {
+        return PacketResult.Invalid(
+            "Capabilities packet too short (${packet.size} bytes, need at least " +
+                "${BoardBle.CAPABILITIES_MIN_LENGTH})"
+        )
     }
     val type = packet[0].toInt() and 0xFF
     if (type != BoardBle.TYPE_CAPABILITIES) {
