@@ -81,7 +81,22 @@ fun GameScreen(
 
     GameDialogs(uiModule, onGameEnd)
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // The whole screen is the "I have moved" target, clocks included: a player ending their move
+    // reaches for the clock, exactly as on a real chess clock, and the on-screen hint promises "tap
+    // anywhere". Buttons nested below still consume their own taps. Feedback is suppressed to keep
+    // this calm rather than flashing on every stray tap.
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = awaitingPlayer,
+                onClick = onMoveReady,
+            )
+    ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Black's clock is rotated so it reads correctly from the far side of the board.
             ClockPanel(
@@ -100,7 +115,6 @@ fun GameScreen(
                 awaitingPlayer = awaitingPlayer,
                 showBoard = showBoard,
                 onToggleBoard = { showBoard = !showBoard },
-                onTapMoveReady = onMoveReady,
                 onResign = onResign,
                 onOfferDraw = onOfferDraw,
                 onAbort = onAbort,
@@ -126,24 +140,13 @@ private fun CenterPanel(
     awaitingPlayer: Boolean,
     showBoard: Boolean,
     onToggleBoard: () -> Unit,
-    onTapMoveReady: () -> Unit,
     onResign: () -> Unit,
     onOfferDraw: () -> Unit,
     onAbort: () -> Unit,
 ) {
-    // The whole middle of the screen is the "I have moved" target, so it can be hit without
-    // looking. Feedback is suppressed to keep it calm rather than flashing on every stray tap.
-    val interactionSource = remember { MutableInteractionSource() }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                enabled = awaitingPlayer,
-                onClick = onTapMoveReady,
-            )
             .padding(horizontal = 20.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
