@@ -1,9 +1,9 @@
 package com.nachogoro.smartchess
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nachogoro.smartchess.core.ChessViewModel
 import com.nachogoro.smartchess.core.Screen
+import com.nachogoro.smartchess.data.AppLanguage
 import com.nachogoro.smartchess.ui.screens.ConnectionScreen
 import com.nachogoro.smartchess.ui.screens.GameScreen
 import com.nachogoro.smartchess.ui.screens.GameSetupScreen
@@ -23,7 +24,8 @@ import com.nachogoro.smartchess.ui.screens.SettingsScreen
 import com.nachogoro.smartchess.ui.theme.SmartChessTheme
 import scp.protocol.GameMode
 
-class MainActivity : ComponentActivity() {
+/** AppCompatActivity for its per-app language support; the UI itself is entirely Compose. */
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -70,6 +72,10 @@ private fun SmartChessApp(viewModel: ChessViewModel = viewModel()) {
             SettingsScreen(
                 settings = settings,
                 connectionState = connectionState,
+                // Read from AppCompat rather than held in state: changing it recreates the
+                // activity, so this is re-read with the new value already in force.
+                language = AppLanguage.current(),
+                onSetLanguage = AppLanguage::apply,
                 onSavePlayerName = viewModel::savePlayerName,
                 onSetAnnounceOpponentMoves = viewModel::setAnnounceOpponentMoves,
                 onClearModuleSettings = { viewModel.saveModuleSettings(it, emptyMap()) },

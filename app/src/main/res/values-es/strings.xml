@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Anuncio hablado de la jugada del rival. Ver values/strings.xml para el porqué de que estos
+      textos sean recursos: se leen en voz alta, así que la voz debe usar el idioma en que están
+      escritos, y announce_locale es ese idioma.
+    -->
+    <string name="announce_locale" translatable="false">es</string>
+
+    <!-- Pieza, casilla de destino. -->
+    <string name="announce_move">%1$s a %2$s</string>
+    <!-- Pieza, casilla de origen, casilla de destino. Cuando hace falta desambiguar. -->
+    <string name="announce_move_from">%1$s de %2$s a %3$s</string>
+    <!-- Pieza, casilla de destino. -->
+    <string name="announce_capture">%1$s captura en %2$s</string>
+    <!-- Pieza, casilla de origen, casilla de destino. -->
+    <string name="announce_capture_from">%1$s de %2$s captura en %3$s</string>
+    <string name="announce_castle_kingside">Enroque corto</string>
+    <string name="announce_castle_queenside">Enroque largo</string>
+    <!-- La jugada anunciada hasta aquí. Avisa de que sale un peón de una casilla no mencionada. -->
+    <string name="announce_en_passant">%1$s, al paso</string>
+    <!-- La jugada anunciada hasta aquí, y la pieza coronada. -->
+    <string name="announce_promotion">%1$s, coronando %2$s</string>
+    <!-- La jugada anunciada hasta aquí. -->
+    <string name="announce_check">%1$s, jaque</string>
+    <!-- La jugada anunciada hasta aquí. -->
+    <string name="announce_checkmate">%1$s, jaque mate</string>
+
+    <string name="piece_pawn">Peón</string>
+    <string name="piece_knight">Caballo</string>
+    <string name="piece_bishop">Alfil</string>
+    <string name="piece_rook">Torre</string>
+    <string name="piece_queen">Dama</string>
+    <string name="piece_king">Rey</string>
+</resources>

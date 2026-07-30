@@ -1,10 +1,13 @@
 package com.nachogoro.smartchess.speech
 
 import android.content.Context
+import android.content.res.Configuration
 import android.media.AudioAttributes
+import android.os.LocaleList
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
+import androidx.appcompat.app.AppCompatDelegate
 import com.nachogoro.smartchess.R
 import scp.protocol.ShowOpponentMoveParams
 import java.util.Locale
@@ -34,7 +37,10 @@ class MoveSpeaker(context: Context) {
      * newer one replaces it: an announcement is only worth hearing while it is still the position
      * on the board.
      */
-    private var pending: String? = null
+    private var pending: Utterance? = null
+
+    /** What to say and the language to say it in, which travel together for the reason in [speak]. */
+    private data class Utterance(val languageTag: String, val text: String)
 
     init {
         engine = TextToSpeech(this.context) { status ->
@@ -48,7 +54,13 @@ class MoveSpeaker(context: Context) {
     fun announce(params: ShowOpponentMoveParams) {
         val announcement = parseMoveAnnouncement(params.san, params.move, params.isEnPassant)
             ?: return
-        speak(announcement.describe(vocabulary()))
+        val strings = localizedResources()
+        speak(
+            Utterance(
+                languageTag = strings.getString(R.string.announce_locale),
+                text = announcement.describe(vocabulary(strings)),
+            )
+        )
     }
 
     fun shutdown() {
@@ -69,10 +81,6 @@ class MoveSpeaker(context: Context) {
                 .build()
         )
 
-        // Whatever the engine makes of the language is accepted: a move read with the wrong accent
-        // is still worth more than silence.
-        tts.setLanguage(Locale.forLanguageTag(context.getString(R.string.announce_locale)))
-
         isReady = true
         pending?.let {
             pending = null
@@ -80,40 +88,64 @@ class MoveSpeaker(context: Context) {
         }
     }
 
-    private fun speak(text: String) {
+    private fun speak(utterance: Utterance) {
         val tts = engine
         if (tts == null || !isReady) {
-            pending = text
+            pending = utterance
             return
         }
+        // Set per utterance rather than once at startup: this object outlives a language change,
+        // because the view model owning it survives the activity being recreated. Whatever the
+        // engine makes of the language is accepted - a move read in the wrong accent beats silence.
+        tts.setLanguage(Locale.forLanguageTag(utterance.languageTag))
         // Flush rather than queue: one move arrives per turn, so anything still being spoken is a
         // move the player has already played on the board.
-        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID)
+        tts.speak(utterance.text, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID)
+    }
+
+    /**
+     * Resources in the language the app is set to.
+     *
+     * Not simply the application context: below API 33 AppCompat applies a per-app language to
+     * activities, and the application context can still be reporting the system one. Announcements
+     * would then be spoken in a language the screen is not using.
+     *
+     * The locale still comes from [R.string.announce_locale] rather than from this list, because
+     * the two answer different questions. This says which language was asked for; that says which
+     * one the strings actually resolved to - and with the list empty, or set to a language the app
+     * has no translation for, those differ. The voice has to match the words.
+     */
+    private fun localizedResources(): Context {
+        val locales = AppCompatDelegate.getApplicationLocales()
+        if (locales.isEmpty) return context
+        val configuration = Configuration(context.resources.configuration)
+        configuration.setLocales(LocaleList.forLanguageTags(locales.toLanguageTags()))
+        return context.createConfigurationContext(configuration)
     }
 
     /**
      * Read afresh for every announcement so that a language change takes effect immediately,
      * rather than at the next restart.
      */
-    private fun vocabulary() = AnnouncementVocabulary(
+    private fun vocabulary(strings: Context) = AnnouncementVocabulary(
         pieceNames = mapOf(
-            AnnouncedPiece.PAWN to context.getString(R.string.piece_pawn),
-            AnnouncedPiece.KNIGHT to context.getString(R.string.piece_knight),
-            AnnouncedPiece.BISHOP to context.getString(R.string.piece_bishop),
-            AnnouncedPiece.ROOK to context.getString(R.string.piece_rook),
-            AnnouncedPiece.QUEEN to context.getString(R.string.piece_queen),
-            AnnouncedPiece.KING to context.getString(R.string.piece_king),
+            AnnouncedPiece.PAWN to strings.getString(R.string.piece_pawn),
+            AnnouncedPiece.KNIGHT to strings.getString(R.string.piece_knight),
+            AnnouncedPiece.BISHOP to strings.getString(R.string.piece_bishop),
+            AnnouncedPiece.ROOK to strings.getString(R.string.piece_rook),
+            AnnouncedPiece.QUEEN to strings.getString(R.string.piece_queen),
+            AnnouncedPiece.KING to strings.getString(R.string.piece_king),
         ),
-        move = context.getString(R.string.announce_move),
-        moveFrom = context.getString(R.string.announce_move_from),
-        capture = context.getString(R.string.announce_capture),
-        captureFrom = context.getString(R.string.announce_capture_from),
-        castleKingside = context.getString(R.string.announce_castle_kingside),
-        castleQueenside = context.getString(R.string.announce_castle_queenside),
-        enPassant = context.getString(R.string.announce_en_passant),
-        promotion = context.getString(R.string.announce_promotion),
-        check = context.getString(R.string.announce_check),
-        checkmate = context.getString(R.string.announce_checkmate),
+        move = strings.getString(R.string.announce_move),
+        moveFrom = strings.getString(R.string.announce_move_from),
+        capture = strings.getString(R.string.announce_capture),
+        captureFrom = strings.getString(R.string.announce_capture_from),
+        castleKingside = strings.getString(R.string.announce_castle_kingside),
+        castleQueenside = strings.getString(R.string.announce_castle_queenside),
+        enPassant = strings.getString(R.string.announce_en_passant),
+        promotion = strings.getString(R.string.announce_promotion),
+        check = strings.getString(R.string.announce_check),
+        checkmate = strings.getString(R.string.announce_checkmate),
     )
 
     private companion object {

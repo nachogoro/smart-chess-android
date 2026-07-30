@@ -3,6 +3,9 @@
     <!--
       The UI is entirely Compose; this theme only styles the window before Compose takes over.
       Colours are supplied by the Compose theme in ui/theme.
+
+      The AppCompat parent is required by AppCompatActivity, which the app uses for its per-app
+      language support and nothing else.
     -->
-    <style name="Theme.SmartChess" parent="android:Theme.Material.NoActionBar" />
+    <style name="Theme.SmartChess" parent="Theme.AppCompat.DayNight.NoActionBar" />
 </resources>
