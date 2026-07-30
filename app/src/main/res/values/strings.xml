@@ -225,4 +225,24 @@
     <string name="param_range_between">%1$d - %2$d</string>
     <string name="param_range_at_least">at least %1$d</string>
     <string name="param_range_at_most">at most %1$d</string>
+
+    <!-- Game history -->
+    <string name="history_title">Games history</string>
+    <string name="history_empty">No games yet.</string>
+    <string name="history_empty_explanation">Finished games are saved here automatically.</string>
+    <string name="history_back">Back</string>
+    <!-- White\'s name, then Black\'s. -->
+    <string name="history_players">%1$s vs %2$s</string>
+    <string name="history_starting_position">Starting position</string>
+    <string name="history_previous_move">Previous move</string>
+    <string name="history_next_move">Next move</string>
+    <string name="history_final_position">Final position</string>
+    <string name="history_pgn">PGN</string>
+    <string name="history_delete">Delete</string>
+    <string name="history_close">Close</string>
+    <string name="history_delete_title">Delete this game?</string>
+    <string name="history_delete_explanation">The record and its moves are removed permanently.</string>
+    <string name="history_cancel">Cancel</string>
+    <!-- Date and time a game finished, in the list. -->
+    <string name="history_date_format" translatable="false">d MMM yyyy, HH:mm</string>
 </resources>

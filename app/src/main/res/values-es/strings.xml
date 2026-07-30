@@ -217,4 +217,24 @@
     <string name="param_range_between">%1$d - %2$d</string>
     <string name="param_range_at_least">mínimo %1$d</string>
     <string name="param_range_at_most">máximo %1$d</string>
+
+    <!-- Historial de partidas -->
+    <string name="history_title">Historial de partidas</string>
+    <string name="history_empty">Todavía no hay partidas.</string>
+    <string name="history_empty_explanation">Las partidas terminadas se guardan aquí automáticamente.</string>
+    <string name="history_back">Atrás</string>
+    <!-- El nombre de las blancas y el de las negras. -->
+    <string name="history_players">%1$s vs %2$s</string>
+    <string name="history_starting_position">Posición inicial</string>
+    <string name="history_previous_move">Jugada anterior</string>
+    <string name="history_next_move">Jugada siguiente</string>
+    <string name="history_final_position">Posición final</string>
+    <string name="history_pgn">PGN</string>
+    <string name="history_delete">Eliminar</string>
+    <string name="history_close">Cerrar</string>
+    <string name="history_delete_title">¿Eliminar esta partida?</string>
+    <string name="history_delete_explanation">El registro y sus jugadas se borran definitivamente.</string>
+    <string name="history_cancel">Cancelar</string>
+    <!-- Fecha y hora en que terminó la partida, en la lista. -->
+    <string name="history_date_format" translatable="false">d MMM yyyy, HH:mm</string>
 </resources>

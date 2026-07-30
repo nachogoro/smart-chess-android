@@ -38,10 +38,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.nachogoro.smartchess.R
 import com.nachogoro.smartchess.data.GameRecord
 import com.nachogoro.smartchess.data.toPgn
 import com.nachogoro.smartchess.ui.components.ChessBoardView
@@ -84,7 +87,7 @@ fun HistoryScreen(
 @Composable
 private fun GameList(games: List<GameRecord>, onSelect: (GameRecord) -> Unit, onBack: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-        Text("Games history", style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.history_title), style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(16.dp))
 
         if (games.isEmpty()) {
@@ -94,13 +97,13 @@ private fun GameList(games: List<GameRecord>, onSelect: (GameRecord) -> Unit, on
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    "No games yet.",
+                    stringResource(R.string.history_empty),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Finished games are saved here automatically.",
+                    stringResource(R.string.history_empty_explanation),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -117,13 +120,14 @@ private fun GameList(games: List<GameRecord>, onSelect: (GameRecord) -> Unit, on
 
         Spacer(Modifier.height(16.dp))
         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth().height(48.dp)) {
-            Text("Back")
+            Text(stringResource(R.string.history_back))
         }
     }
 }
 
 @Composable
 private fun GameRow(game: GameRecord, onClick: () -> Unit) {
+    val dateFormat = rememberListDateFormat()
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
@@ -137,7 +141,11 @@ private fun GameRow(game: GameRecord, onClick: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "${game.whiteName ?: "White"} vs ${game.blackName ?: "Black"}",
+                    stringResource(
+                        R.string.history_players,
+                        game.whiteName ?: stringResource(R.string.color_white),
+                        game.blackName ?: stringResource(R.string.color_black),
+                    ),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(game.result.ifBlank { "*" }, style = MaterialTheme.typography.titleMedium)
@@ -145,7 +153,7 @@ private fun GameRow(game: GameRecord, onClick: () -> Unit) {
             Spacer(Modifier.height(4.dp))
             Text(
                 listOfNotNull(
-                    LIST_DATE_FORMAT.format(Date(game.playedAt)),
+                    dateFormat.format(Date(game.playedAt)),
                     game.mode.lowercase(Locale.ROOT),
                     "${game.moves.size} moves",
                     game.termination().describe(LocalContext.current),
@@ -159,6 +167,7 @@ private fun GameRow(game: GameRecord, onClick: () -> Unit) {
 
 @Composable
 private fun GameDetail(game: GameRecord, onDelete: () -> Unit, onBack: () -> Unit) {
+    val dateFormat = rememberListDateFormat()
     val moves = remember(game.gameId) { game.moves }
     // Ply 0 is the starting position; ply n shows the position after the nth move.
     var ply by remember(game.gameId) { mutableIntStateOf(moves.size) }
@@ -174,12 +183,16 @@ private fun GameDetail(game: GameRecord, onDelete: () -> Unit, onBack: () -> Uni
             .padding(24.dp),
     ) {
         Text(
-            "${game.whiteName ?: "White"} vs ${game.blackName ?: "Black"}",
+            stringResource(
+                R.string.history_players,
+                game.whiteName ?: stringResource(R.string.color_white),
+                game.blackName ?: stringResource(R.string.color_black),
+            ),
             style = MaterialTheme.typography.headlineSmall,
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            "${LIST_DATE_FORMAT.format(Date(game.playedAt))} - ${game.mode.lowercase(Locale.ROOT)} - " +
+            "${dateFormat.format(Date(game.playedAt))} - ${game.mode.lowercase(Locale.ROOT)} - " +
                 "${game.result.ifBlank { "*" }} (${game.termination().describe(LocalContext.current)})",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -190,7 +203,7 @@ private fun GameDetail(game: GameRecord, onDelete: () -> Unit, onBack: () -> Uni
 
         Spacer(Modifier.height(12.dp))
         Text(
-            if (ply == 0) "Starting position" else "${moveNumberLabel(ply)} ${moves[ply - 1].san}",
+            if (ply == 0) stringResource(R.string.history_starting_position) else "${moveNumberLabel(ply)} ${moves[ply - 1].san}",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
@@ -203,10 +216,10 @@ private fun GameDetail(game: GameRecord, onDelete: () -> Unit, onBack: () -> Uni
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = { ply = 0 }, enabled = ply > 0) {
-                Icon(Icons.Default.FirstPage, contentDescription = "Starting position")
+                Icon(Icons.Default.FirstPage, contentDescription = stringResource(R.string.history_starting_position))
             }
             IconButton(onClick = { ply-- }, enabled = ply > 0) {
-                Icon(Icons.Default.ChevronLeft, contentDescription = "Previous move")
+                Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.history_previous_move))
             }
             Text(
                 "$ply / ${moves.size}",
@@ -215,10 +228,10 @@ private fun GameDetail(game: GameRecord, onDelete: () -> Unit, onBack: () -> Uni
                 textAlign = TextAlign.Center,
             )
             IconButton(onClick = { ply++ }, enabled = ply < moves.size) {
-                Icon(Icons.Default.ChevronRight, contentDescription = "Next move")
+                Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.history_next_move))
             }
             IconButton(onClick = { ply = moves.size }, enabled = ply < moves.size) {
-                Icon(Icons.Default.LastPage, contentDescription = "Final position")
+                Icon(Icons.Default.LastPage, contentDescription = stringResource(R.string.history_final_position))
             }
         }
 
@@ -228,26 +241,26 @@ private fun GameDetail(game: GameRecord, onDelete: () -> Unit, onBack: () -> Uni
         Spacer(Modifier.height(20.dp))
         Row(Modifier.fillMaxWidth()) {
             OutlinedButton(onClick = { showPgn = true }, modifier = Modifier.weight(1f)) {
-                Text("PGN")
+                Text(stringResource(R.string.history_pgn))
             }
             Spacer(Modifier.width(12.dp))
             OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Default.Delete, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Delete")
+                Text(stringResource(R.string.history_delete))
             }
         }
 
         Spacer(Modifier.height(12.dp))
         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth().height(48.dp)) {
-            Text("Back")
+            Text(stringResource(R.string.history_back))
         }
     }
 
     if (showPgn) {
         AlertDialog(
             onDismissRequest = { showPgn = false },
-            title = { Text("PGN") },
+            title = { Text(stringResource(R.string.history_pgn)) },
             text = {
                 // PGN is wrapped at 80 columns by definition, so let it scroll rather than re-wrap
                 // it to the screen and stop being PGN.
@@ -262,23 +275,23 @@ private fun GameDetail(game: GameRecord, onDelete: () -> Unit, onBack: () -> Uni
                     )
                 }
             },
-            confirmButton = { TextButton(onClick = { showPgn = false }) { Text("Close") } },
+            confirmButton = { TextButton(onClick = { showPgn = false }) { Text(stringResource(R.string.history_close)) } },
         )
     }
 
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Delete this game?") },
-            text = { Text("The record and its moves are removed permanently.") },
+            title = { Text(stringResource(R.string.history_delete_title)) },
+            text = { Text(stringResource(R.string.history_delete_explanation)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
                     onDelete()
-                }) { Text("Delete") }
+                }) { Text(stringResource(R.string.history_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text("Cancel") }
+                TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.history_cancel)) }
             },
         )
     }
@@ -333,4 +346,16 @@ private fun moveNumberLabel(ply: Int): String {
     return if (ply % 2 == 1) "$moveNumber." else "$moveNumber..."
 }
 
-private val LIST_DATE_FORMAT = SimpleDateFormat("d MMM yyyy, HH:mm", Locale.getDefault())
+/**
+ * The date a game finished, in the app's language.
+ *
+ * Built per composition from the configuration's locale rather than once from `Locale.getDefault`,
+ * which is the *device's* language: with a per-app language set, a month name taken from the
+ * default would be the one language on the screen that had not changed.
+ */
+@Composable
+private fun rememberListDateFormat(): SimpleDateFormat {
+    val locale = LocalConfiguration.current.locales[0]
+    val pattern = stringResource(R.string.history_date_format)
+    return remember(locale, pattern) { SimpleDateFormat(pattern, locale) }
+}
