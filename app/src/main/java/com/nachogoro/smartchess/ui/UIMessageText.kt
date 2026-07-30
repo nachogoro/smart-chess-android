@@ -1,5 +1,7 @@
 package com.nachogoro.smartchess.ui
 
+import scp.protocol.Color
+import scp.protocol.DrawOffer
 import scp.protocol.ModuleError
 import scp.protocol.UIMessage
 
@@ -18,6 +20,10 @@ fun UIMessage.describe(): String = when (this) {
     UIMessage.RemoteCapabilitiesUnavailable -> "Could not read the platform's capabilities."
     UIMessage.DrawNotSupportedByEngine -> "The engine does not take draw offers."
     is UIMessage.BoardFailed -> "Board error." withDetail error
+    is UIMessage.BoardCapabilitiesUnavailable -> "Could not read the board." withDetail error
+    is UIMessage.EngineConfigurationFailed -> "The engine would not take those settings." withDetail error
+    is UIMessage.RemoteConfigurationFailed -> "The platform would not take those settings." withDetail error
+    is UIMessage.SeekFailed -> "Could not look for an opponent." withDetail error
     is UIMessage.MoveRejected -> "That move was rejected." withDetail error
     is UIMessage.OpponentMoveRejected -> "The opponent's move was rejected." withDetail error
     is UIMessage.EngineMoveRejected -> "The engine's move was rejected." withDetail error
@@ -41,3 +47,16 @@ fun UIMessage.describe(): String = when (this) {
  * reading a bug report.
  */
 private infix fun String.withDetail(error: ModuleError) = "$this (${error.code})"
+
+/**
+ * Who offered a draw, in words.
+ *
+ * Their name if there is one, since it is theirs and not ours to translate; otherwise the colour,
+ * and failing that the opponent. The core sends what it knows and leaves the sentence here.
+ */
+fun DrawOffer.describe(): String =
+    name ?: when (color) {
+        Color.WHITE -> "White"
+        Color.BLACK -> "Black"
+        null -> "Your opponent"
+    }

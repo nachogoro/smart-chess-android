@@ -421,7 +421,7 @@ private fun GameDialogs(uiModule: AndroidUIModule, onGameEnd: () -> Unit) {
         AlertDialog(
             onDismissRequest = { request.complete(false) },
             title = { Text("Draw offered") },
-            text = { Text("${request.input} offers a draw.") },
+            text = { Text("${request.input.describe()} offers a draw.") },
             confirmButton = { Button(onClick = { request.complete(true) }) { Text("Accept") } },
             dismissButton = {
                 OutlinedButton(onClick = { request.complete(false) }) { Text("Decline") }

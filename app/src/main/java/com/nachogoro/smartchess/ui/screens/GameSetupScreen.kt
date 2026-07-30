@@ -42,7 +42,9 @@ import scp.protocol.EngineGameConfig
 import scp.protocol.EngineInfo
 import scp.protocol.GameMode
 import scp.protocol.LocalGameConfig
+import com.nachogoro.smartchess.ui.describe
 import scp.protocol.PlatformInfo
+import scp.protocol.UIMessage
 import scp.protocol.RemoteGameConfig
 import scp.protocol.TimeControl
 import scp.protocol.TimeControlType
@@ -193,7 +195,7 @@ private fun WaitingForOrchestrator(message: String, onCancel: () -> Unit) {
 
 @Composable
 private fun LocalGameForm(
-    errorMessage: String?,
+    errorMessage: UIMessage?,
     settings: AppSettings,
     onSubmit: (LocalGameConfig) -> Unit,
     onCancel: () -> Unit,
@@ -212,7 +214,7 @@ private fun LocalGameForm(
     )
     Spacer(Modifier.height(20.dp))
 
-    SetupErrorBanner(errorMessage)
+    SetupErrorBanner(errorMessage?.describe())
 
     OutlinedTextField(
         value = whiteName,
@@ -315,7 +317,7 @@ private fun EngineGameForm(
 
     // The orchestrator re-prompts with an error when the adapter rejects a configuration, so both
     // that and local validation surface in the same place.
-    SetupErrorBanner(params.errorMessage ?: validationError)
+    SetupErrorBanner(params.errorMessage?.describe() ?: validationError)
 
     Text("Play as", style = MaterialTheme.typography.titleMedium)
     Spacer(Modifier.height(8.dp))
@@ -400,7 +402,7 @@ private fun RemoteGameForm(
     )
     Spacer(Modifier.height(20.dp))
 
-    SetupErrorBanner(params.errorMessage ?: validationError)
+    SetupErrorBanner(params.errorMessage?.describe() ?: validationError)
 
     if (params.parameters.isNotEmpty()) {
         Text("Account", style = MaterialTheme.typography.titleMedium)

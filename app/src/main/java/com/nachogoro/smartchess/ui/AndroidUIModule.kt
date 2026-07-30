@@ -40,7 +40,7 @@ class AndroidUIModule : UIModule {
 
     var pendingGameModeSelection by mutableStateOf<PendingRequest<List<GameMode>, GameMode>?>(null)
         private set
-    var pendingLocalGameConfig by mutableStateOf<PendingRequest<String?, LocalGameConfig>?>(null)
+    var pendingLocalGameConfig by mutableStateOf<PendingRequest<UIMessage?, LocalGameConfig>?>(null)
         private set
     var pendingEngineSelection by mutableStateOf<PendingRequest<List<EngineInfo>, String>?>(null)
         private set
@@ -54,7 +54,7 @@ class AndroidUIModule : UIModule {
         private set
     var pendingDisambiguation by mutableStateOf<PendingRequest<DisambiguationContext, String>?>(null)
         private set
-    var pendingDrawResponse by mutableStateOf<PendingRequest<String, Boolean>?>(null)
+    var pendingDrawResponse by mutableStateOf<PendingRequest<DrawOffer, Boolean>?>(null)
         private set
 
     // -- One-way notifications --
@@ -117,7 +117,7 @@ class AndroidUIModule : UIModule {
     override suspend fun selectGameMode(availableModes: List<GameMode>): Result<UIError, GameMode> =
         awaitAnswer({ pendingGameModeSelection = it }, { pendingGameModeSelection = null }, availableModes)
 
-    override suspend fun configureLocalGame(errorMessage: String?): Result<UIError, LocalGameConfig> =
+    override suspend fun configureLocalGame(errorMessage: UIMessage?): Result<UIError, LocalGameConfig> =
         awaitAnswer({ pendingLocalGameConfig = it }, { pendingLocalGameConfig = null }, errorMessage)
 
     override suspend fun selectEngine(engines: List<EngineInfo>): Result<UIError, String> =
@@ -140,7 +140,7 @@ class AndroidUIModule : UIModule {
     override suspend fun promptMoveDisambiguation(moves: List<String>, color: Color): Result<UIError, String> =
         awaitAnswer({ pendingDisambiguation = it }, { pendingDisambiguation = null }, DisambiguationContext(moves, color))
 
-    override suspend fun promptDrawResponse(gameId: String, from: String): Result<UIError, Boolean> =
+    override suspend fun promptDrawResponse(gameId: String, from: DrawOffer): Result<UIError, Boolean> =
         awaitAnswer({ pendingDrawResponse = it }, { pendingDrawResponse = null }, from)
 
     // -- UIModule: notifications --
