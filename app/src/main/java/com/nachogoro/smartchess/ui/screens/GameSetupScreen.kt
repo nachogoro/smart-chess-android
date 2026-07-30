@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.nachogoro.smartchess.data.AppSettings
@@ -43,6 +44,7 @@ import scp.protocol.EngineGameConfig
 import scp.protocol.EngineInfo
 import scp.protocol.GameMode
 import scp.protocol.LocalGameConfig
+import com.nachogoro.smartchess.R
 import com.nachogoro.smartchess.ui.describe
 import scp.protocol.PlatformInfo
 import scp.protocol.UIMessage
@@ -158,12 +160,12 @@ fun GameSetupScreen(
             // on the platform. Backing out therefore has to withdraw the seek explicitly rather
             // than cancel a prompt, or the seek stays live on the server after the user has left.
             uiModule.isSeeking -> WaitingForOrchestrator(
-                message = "Looking for an opponent...",
+                message = stringResource(R.string.setup_seeking),
                 onCancel = onCancelSeek,
             )
 
             else -> WaitingForOrchestrator(
-                message = "Preparing game...",
+                message = stringResource(R.string.setup_preparing),
                 onCancel = onBack,
             )
         }
@@ -190,7 +192,7 @@ private fun WaitingForOrchestrator(message: String, onCancel: () -> Unit) {
         Spacer(Modifier.height(16.dp))
         Text(message, style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(24.dp))
-        OutlinedButton(onClick = onCancel) { Text("Cancel") }
+        OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.setup_cancel)) }
     }
 }
 
@@ -202,14 +204,16 @@ private fun LocalGameForm(
     onCancel: () -> Unit,
 ) {
     // The saved nickname is the natural default for whoever owns the phone.
-    var whiteName by remember { mutableStateOf(settings.playerName.ifBlank { "White" }) }
-    var blackName by remember { mutableStateOf("Black") }
+    val defaultWhite = stringResource(R.string.color_white)
+    val defaultBlack = stringResource(R.string.color_black)
+    var whiteName by remember { mutableStateOf(settings.playerName.ifBlank { defaultWhite }) }
+    var blackName by remember { mutableStateOf(defaultBlack) }
     val timeControl = rememberTimeControlState()
 
-    Text("Local game", style = MaterialTheme.typography.headlineMedium)
+    Text(stringResource(R.string.setup_local_title), style = MaterialTheme.typography.headlineMedium)
     Spacer(Modifier.height(8.dp))
     Text(
-        "Both players share the physical board. Tap the screen when you have finished your move.",
+        stringResource(R.string.setup_local_explanation),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -220,7 +224,7 @@ private fun LocalGameForm(
     OutlinedTextField(
         value = whiteName,
         onValueChange = { whiteName = it },
-        label = { Text("White player") },
+        label = { Text(stringResource(R.string.setup_white_player)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -228,7 +232,7 @@ private fun LocalGameForm(
     OutlinedTextField(
         value = blackName,
         onValueChange = { blackName = it },
-        label = { Text("Black player") },
+        label = { Text(stringResource(R.string.setup_black_player)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -242,19 +246,19 @@ private fun LocalGameForm(
             onClick = {
                 onSubmit(
                     LocalGameConfig(
-                        whiteName = whiteName.trim().ifBlank { "White" },
-                        blackName = blackName.trim().ifBlank { "Black" },
+                        whiteName = whiteName.trim().ifBlank { defaultWhite },
+                        blackName = blackName.trim().ifBlank { defaultBlack },
                         timeControl = timeControl.toTimeControl(),
                     )
                 )
             },
             modifier = Modifier.weight(1f).height(50.dp),
-        ) { Text("Start game") }
+        ) { Text(stringResource(R.string.setup_start_game)) }
         Spacer(Modifier.width(12.dp))
         OutlinedButton(
             onClick = onCancel,
             modifier = Modifier.weight(1f).height(50.dp),
-        ) { Text("Back") }
+        ) { Text(stringResource(R.string.setup_back)) }
     }
 }
 
@@ -264,7 +268,7 @@ private fun EnginePicker(
     onSelect: (EngineInfo) -> Unit,
     onCancel: () -> Unit,
 ) {
-    Text("Choose an engine", style = MaterialTheme.typography.headlineMedium)
+    Text(stringResource(R.string.setup_choose_engine), style = MaterialTheme.typography.headlineMedium)
     Spacer(Modifier.height(20.dp))
 
     for (engine in engines) {
@@ -285,7 +289,7 @@ private fun EnginePicker(
     }
 
     Spacer(Modifier.height(16.dp))
-    OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text("Back") }
+    OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.setup_back)) }
 }
 
 /**
@@ -304,13 +308,14 @@ private fun EngineGameForm(
 ) {
     var playerColor by remember { mutableStateOf(Color.WHITE) }
     val timeControl = rememberTimeControlState()
+    val context = LocalContext.current
     val parameterForm = rememberParameterFormState(params.parameters, savedValues)
     var validationError by remember { mutableStateOf<String?>(null) }
 
-    Text("Play ${params.engineName}", style = MaterialTheme.typography.headlineMedium)
+    Text(stringResource(R.string.setup_engine_title, params.engineName), style = MaterialTheme.typography.headlineMedium)
     Spacer(Modifier.height(8.dp))
     Text(
-        "The engine runs on this phone. Move its pieces on the board when it replies.",
+        stringResource(R.string.setup_engine_explanation),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -320,18 +325,18 @@ private fun EngineGameForm(
     // that and local validation surface in the same place.
     SetupErrorBanner(params.errorMessage?.describe(LocalContext.current) ?: validationError)
 
-    Text("Play as", style = MaterialTheme.typography.titleMedium)
+    Text(stringResource(R.string.setup_play_as), style = MaterialTheme.typography.titleMedium)
     Spacer(Modifier.height(8.dp))
     Row(Modifier.fillMaxWidth()) {
         ColorChoice(
-            label = "White",
+            label = stringResource(R.string.color_white),
             selected = playerColor == Color.WHITE,
             onClick = { playerColor = Color.WHITE },
             modifier = Modifier.weight(1f),
         )
         Spacer(Modifier.width(12.dp))
         ColorChoice(
-            label = "Black",
+            label = stringResource(R.string.color_black),
             selected = playerColor == Color.BLACK,
             onClick = { playerColor = Color.BLACK },
             modifier = Modifier.weight(1f),
@@ -340,7 +345,7 @@ private fun EngineGameForm(
 
     if (params.parameters.isNotEmpty()) {
         Spacer(Modifier.height(24.dp))
-        Text("Engine options", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.setup_engine_options), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(12.dp))
         ParameterFormFields(parameterForm)
     }
@@ -352,7 +357,7 @@ private fun EngineGameForm(
     Row(Modifier.fillMaxWidth()) {
         Button(
             onClick = {
-                val error = parameterForm.validationError()
+                val error = parameterForm.validationError(context)
                 validationError = error
                 if (error != null) return@Button
                 onSubmit(
@@ -365,12 +370,12 @@ private fun EngineGameForm(
                 )
             },
             modifier = Modifier.weight(1f).height(50.dp),
-        ) { Text("Start game") }
+        ) { Text(stringResource(R.string.setup_start_game)) }
         Spacer(Modifier.width(12.dp))
         OutlinedButton(
             onClick = onCancel,
             modifier = Modifier.weight(1f).height(50.dp),
-        ) { Text("Back") }
+        ) { Text(stringResource(R.string.setup_back)) }
     }
 }
 
@@ -390,14 +395,15 @@ private fun RemoteGameForm(
     onSubmit: (RemoteGameConfig, Map<String, String>, Map<String, String>) -> Unit,
     onCancel: () -> Unit,
 ) {
+    val context = LocalContext.current
     val platformForm = rememberParameterFormState(params.parameters, savedPlatformValues)
     val seekForm = rememberParameterFormState(params.seekParameters, savedSeekValues)
     var validationError by remember { mutableStateOf<String?>(null) }
 
-    Text("Play on ${params.platform}", style = MaterialTheme.typography.headlineMedium)
+    Text(stringResource(R.string.setup_remote_title, params.platform), style = MaterialTheme.typography.headlineMedium)
     Spacer(Modifier.height(8.dp))
     Text(
-        "Your opponent plays online. Move their pieces on your board as they arrive.",
+        stringResource(R.string.setup_remote_explanation),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -406,14 +412,14 @@ private fun RemoteGameForm(
     SetupErrorBanner(params.errorMessage?.describe(LocalContext.current) ?: validationError)
 
     if (params.parameters.isNotEmpty()) {
-        Text("Account", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.setup_account), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(12.dp))
         ParameterFormFields(platformForm)
         Spacer(Modifier.height(12.dp))
     }
 
     if (params.seekParameters.isNotEmpty()) {
-        Text("Game", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.setup_game), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(12.dp))
         ParameterFormFields(seekForm)
     }
@@ -423,7 +429,7 @@ private fun RemoteGameForm(
     Row(Modifier.fillMaxWidth()) {
         Button(
             onClick = {
-                val error = platformForm.validationError() ?: seekForm.validationError()
+                val error = platformForm.validationError(context) ?: seekForm.validationError(context)
                 validationError = error
                 if (error != null) return@Button
                 onSubmit(
@@ -436,12 +442,12 @@ private fun RemoteGameForm(
                 )
             },
             modifier = Modifier.weight(1f).height(50.dp),
-        ) { Text("Find a game") }
+        ) { Text(stringResource(R.string.setup_find_game)) }
         Spacer(Modifier.width(12.dp))
         OutlinedButton(
             onClick = onCancel,
             modifier = Modifier.weight(1f).height(50.dp),
-        ) { Text("Back") }
+        ) { Text(stringResource(R.string.setup_back)) }
     }
 }
 
@@ -451,7 +457,7 @@ private fun PlatformPicker(
     onSelect: (PlatformInfo) -> Unit,
     onCancel: () -> Unit,
 ) {
-    Text("Choose a platform", style = MaterialTheme.typography.headlineMedium)
+    Text(stringResource(R.string.setup_choose_platform), style = MaterialTheme.typography.headlineMedium)
     Spacer(Modifier.height(20.dp))
 
     for (platform in platforms) {
@@ -474,7 +480,7 @@ private fun PlatformPicker(
     }
 
     Spacer(Modifier.height(16.dp))
-    OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text("Back") }
+    OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.setup_back)) }
 }
 
 @Composable
@@ -537,9 +543,9 @@ fun TimeControlSection(state: TimeControlState) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Column {
-            Text("Use clocks", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.setup_use_clocks), style = MaterialTheme.typography.titleMedium)
             Text(
-                "Fischer increment",
+                stringResource(R.string.setup_fischer_increment),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -553,7 +559,7 @@ fun TimeControlSection(state: TimeControlState) {
             OutlinedTextField(
                 value = state.minutes,
                 onValueChange = { new -> state.minutes = new.filter { it.isDigit() } },
-                label = { Text("Minutes") },
+                label = { Text(stringResource(R.string.setup_minutes)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 modifier = Modifier.weight(1f),
@@ -562,7 +568,7 @@ fun TimeControlSection(state: TimeControlState) {
             OutlinedTextField(
                 value = state.incrementSeconds,
                 onValueChange = { new -> state.incrementSeconds = new.filter { it.isDigit() } },
-                label = { Text("Increment (s)") },
+                label = { Text(stringResource(R.string.setup_increment_seconds)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 modifier = Modifier.weight(1f),

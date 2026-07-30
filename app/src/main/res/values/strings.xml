@@ -187,4 +187,42 @@
     <string name="piece_name_king">King</string>
     <!-- Colour, piece and square, read out by a screen reader. -->
     <string name="board_piece_on_square">%1$s %2$s on %3$s</string>
+
+    <!-- Game setup -->
+    <string name="setup_seeking">Looking for an opponent\u2026</string>
+    <string name="setup_preparing">Preparing game\u2026</string>
+    <string name="setup_cancel">Cancel</string>
+    <string name="setup_back">Back</string>
+    <string name="setup_start_game">Start game</string>
+    <string name="setup_local_title">Local game</string>
+    <string name="setup_local_explanation">Both players share the physical board. Tap the screen when you have finished your move.</string>
+    <string name="setup_white_player">White player</string>
+    <string name="setup_black_player">Black player</string>
+    <string name="setup_choose_engine">Choose an engine</string>
+    <!-- The engine\'s name. -->
+    <string name="setup_engine_title">Play %1$s</string>
+    <string name="setup_engine_explanation">The engine runs on this phone. Move its pieces on the board when it replies.</string>
+    <string name="setup_play_as">Play as</string>
+    <string name="setup_engine_options">Engine options</string>
+    <!-- The platform\'s name. -->
+    <string name="setup_remote_title">Play on %1$s</string>
+    <string name="setup_remote_explanation">Your opponent plays online. Move their pieces on your board as they arrive.</string>
+    <string name="setup_account">Account</string>
+    <string name="setup_game">Game</string>
+    <string name="setup_find_game">Find a game</string>
+    <string name="setup_choose_platform">Choose a platform</string>
+    <string name="setup_use_clocks">Use clocks</string>
+    <string name="setup_fischer_increment">Fischer increment</string>
+    <string name="setup_minutes">Minutes</string>
+    <string name="setup_increment_seconds">Increment (s)</string>
+
+    <!-- Parameter form -->
+    <!-- The field\'s label. -->
+    <string name="param_required">%1$s is required</string>
+    <string name="param_whole_number">%1$s must be a whole number</string>
+    <string name="param_at_least">%1$s must be at least %2$d</string>
+    <string name="param_at_most">%1$s must be at most %2$d</string>
+    <string name="param_range_between">%1$d - %2$d</string>
+    <string name="param_range_at_least">at least %1$d</string>
+    <string name="param_range_at_most">at most %1$d</string>
 </resources>

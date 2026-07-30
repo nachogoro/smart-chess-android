@@ -1,5 +1,6 @@
 package com.nachogoro.smartchess.ui.components
 
+import android.content.Context
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,11 +24,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
+import com.nachogoro.smartchess.R
 import scp.protocol.ParameterDescriptor
 import scp.protocol.ParameterType
 
@@ -71,19 +74,23 @@ class ParameterFormState(
     fun visibleDescriptors(): List<ParameterDescriptor> = descriptors.filter { isVisible(it) }
 
     /** The first validation problem among visible fields, or null when the form is valid. */
-    fun validationError(): String? {
+    fun validationError(context: Context): String? {
         for (descriptor in visibleDescriptors()) {
             val raw = fields[descriptor.name]?.value.orEmpty()
             if (descriptor.required && raw.isBlank()) {
-                return "${descriptor.description} is required"
+                return context.getString(R.string.param_required, descriptor.description)
             }
             if (descriptor.type == ParameterType.SPIN && raw.isNotBlank()) {
                 val number = raw.toIntOrNull()
-                    ?: return "${descriptor.description} must be a whole number"
+                    ?: return context.getString(R.string.param_whole_number, descriptor.description)
                 val min = descriptor.min
                 val max = descriptor.max
-                if (min != null && number < min) return "${descriptor.description} must be at least $min"
-                if (max != null && number > max) return "${descriptor.description} must be at most $max"
+                if (min != null && number < min) {
+                    return context.getString(R.string.param_at_least, descriptor.description, min)
+                }
+                if (max != null && number > max) {
+                    return context.getString(R.string.param_at_most, descriptor.description, max)
+                }
             }
         }
         return null
@@ -209,13 +216,14 @@ private fun ParameterField(descriptor: ParameterDescriptor, state: MutableState<
     }
 }
 
+@Composable
 private fun ParameterDescriptor.rangeLabel(): String? {
     val min = min
     val max = max
     return when {
-        min != null && max != null -> "$min - $max"
-        min != null -> "at least $min"
-        max != null -> "at most $max"
+        min != null && max != null -> stringResource(R.string.param_range_between, min, max)
+        min != null -> stringResource(R.string.param_range_at_least, min)
+        max != null -> stringResource(R.string.param_range_at_most, max)
         else -> null
     }
 }

@@ -179,4 +179,42 @@
     <string name="piece_name_king">Rey</string>
     <!-- Color, pieza y casilla, leídos por el lector de pantalla. -->
     <string name="board_piece_on_square">%2$s %1$s en %3$s</string>
+
+    <!-- Preparación de la partida -->
+    <string name="setup_seeking">Buscando rival\u2026</string>
+    <string name="setup_preparing">Preparando la partida\u2026</string>
+    <string name="setup_cancel">Cancelar</string>
+    <string name="setup_back">Atrás</string>
+    <string name="setup_start_game">Empezar partida</string>
+    <string name="setup_local_title">Partida local</string>
+    <string name="setup_local_explanation">Los dos jugadores comparten el tablero. Toca la pantalla cuando hayas terminado tu jugada.</string>
+    <string name="setup_white_player">Jugador de blancas</string>
+    <string name="setup_black_player">Jugador de negras</string>
+    <string name="setup_choose_engine">Elige un motor</string>
+    <!-- El nombre del motor. -->
+    <string name="setup_engine_title">Jugar contra %1$s</string>
+    <string name="setup_engine_explanation">El motor se ejecuta en este teléfono. Mueve sus piezas en el tablero cuando responda.</string>
+    <string name="setup_play_as">Juegas con</string>
+    <string name="setup_engine_options">Opciones del motor</string>
+    <!-- El nombre de la plataforma. -->
+    <string name="setup_remote_title">Jugar en %1$s</string>
+    <string name="setup_remote_explanation">Tu rival juega en línea. Mueve sus piezas en tu tablero según lleguen.</string>
+    <string name="setup_account">Cuenta</string>
+    <string name="setup_game">Partida</string>
+    <string name="setup_find_game">Buscar partida</string>
+    <string name="setup_choose_platform">Elige una plataforma</string>
+    <string name="setup_use_clocks">Usar reloj</string>
+    <string name="setup_fischer_increment">Incremento Fischer</string>
+    <string name="setup_minutes">Minutos</string>
+    <string name="setup_increment_seconds">Incremento (s)</string>
+
+    <!-- Formulario de parámetros -->
+    <!-- La etiqueta del campo. -->
+    <string name="param_required">%1$s es obligatorio</string>
+    <string name="param_whole_number">%1$s debe ser un número entero</string>
+    <string name="param_at_least">%1$s debe ser como mínimo %2$d</string>
+    <string name="param_at_most">%1$s debe ser como máximo %2$d</string>
+    <string name="param_range_between">%1$d - %2$d</string>
+    <string name="param_range_at_least">mínimo %1$d</string>
+    <string name="param_range_at_most">máximo %1$d</string>
 </resources>
