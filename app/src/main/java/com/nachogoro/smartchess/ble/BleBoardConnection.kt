@@ -18,6 +18,7 @@ import android.os.ParcelUuid
 import android.util.Log
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +28,25 @@ import kotlinx.coroutines.withTimeout
 import java.util.UUID
 
 private const val TAG = "BleBoard"
+
+/**
+ * The first connect follows a scan, so the board was just seen advertising and the only thing left
+ * that can be slow is service discovery. A generous budget costs nothing here.
+ */
+private const val INITIAL_CONNECT_TIMEOUT_MS = 20_000L
+
+/**
+ * Budget for one attempt at bringing a dropped link back up, and how many attempts to make.
+ *
+ * The board stops advertising for a while after a client disconnects, and a peripheral that is not
+ * advertising cannot be connected to at all. Several short attempts therefore beat one long wait:
+ * they pick the board up soon after it becomes reachable, re-issuing the connection rather than
+ * sitting on an attempt that may itself be wedged, and they bound what a board that is simply
+ * switched off costs the caller.
+ */
+private const val RECONNECT_ATTEMPT_TIMEOUT_MS = 4_000L
+private const val RECONNECT_ATTEMPTS = 3
+private const val RECONNECT_RETRY_DELAY_MS = 500L
 
 /** Lifecycle of the link to the physical board, as far as the UI is concerned. */
 sealed interface BoardConnectionState {
@@ -160,7 +180,7 @@ class BleBoardConnection(context: Context) {
             val device = withTimeout(scanTimeoutMs) { scanForBoard() }
 
             _state.value = BoardConnectionState.Connecting(device.safeName())
-            connectGatt(device)
+            connectGatt(device, INITIAL_CONNECT_TIMEOUT_MS)
 
             val capsBytes = readCharacteristic(BoardBle.CAPABILITIES_UUID)
             when (val caps = parseCapabilities(capsBytes)) {
@@ -287,13 +307,20 @@ class BleBoardConnection(context: Context) {
         runCatching { adapter?.bluetoothLeScanner?.stopScan(callback) }
     }
 
-    private suspend fun connectGatt(device: BluetoothDevice) {
+    private suspend fun connectGatt(device: BluetoothDevice, timeoutMs: Long) {
         val deferred = CompletableDeferred<Unit>()
         pendingConnection = deferred
 
         gatt = device.connectGatt(appContext, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
 
-        withTimeout(20_000) { deferred.await() }
+        try {
+            withTimeout(timeoutMs) { deferred.await() }
+        } catch (_: TimeoutCancellationException) {
+            // Reported as a board failure rather than left as a CancellationException: callers
+            // retry on BleOperationException, and swallowing a cancellation to do so would break
+            // the caller's own cancellation.
+            throw BleOperationException("Timed out connecting to the board")
+        }
     }
 
     /**
@@ -335,16 +362,23 @@ class BleBoardConnection(context: Context) {
         // Deliberately not published as Connecting: a reconnect happens on the way to serving a
         // read, and announcing it would make the UI flicker between "no board" and "connected"
         // around every move. The manual path shows its own progress from the view model.
-        try {
-            connectGatt(device)
-        } catch (e: Exception) {
-            // connectGatt assigns the GATT client before awaiting discovery, so a failed attempt
-            // would otherwise leave a half-open one behind for the next read to trust.
-            discardGatt()
-            throw e
+        var lastFailure: BleOperationException? = null
+        repeat(RECONNECT_ATTEMPTS) { attempt ->
+            if (attempt > 0) delay(RECONNECT_RETRY_DELAY_MS)
+            try {
+                connectGatt(device, RECONNECT_ATTEMPT_TIMEOUT_MS)
+                // Capabilities are static, so the reconnect does not re-read them.
+                _state.value = BoardConnectionState.Ready(device.safeName(), caps)
+                return
+            } catch (e: BleOperationException) {
+                Log.i(TAG, "Reconnect attempt ${attempt + 1}/$RECONNECT_ATTEMPTS: ${e.message}")
+                // connectGatt assigns the GATT client before awaiting discovery, so a failed
+                // attempt would otherwise leave a half-open one behind to be trusted later.
+                discardGatt()
+                lastFailure = e
+            }
         }
-        // Capabilities are static, so the reconnect does not re-read them.
-        _state.value = BoardConnectionState.Ready(device.safeName(), caps)
+        throw lastFailure ?: BleOperationException("Could not reach the board")
     }
 
     /** Reconnect attempt for [connect]; returns whether the link came back up. */
