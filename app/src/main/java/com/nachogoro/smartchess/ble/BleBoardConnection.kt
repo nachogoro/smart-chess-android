@@ -469,9 +469,11 @@ class BleBoardConnection(context: Context) {
                     if (wasReady) {
                         val device = knownDevice
                         val caps = knownCapabilities
-                        // Measured on a Pixel 10: the link is torn down about 29s after the last
-                        // operation. Since a game reads the board minutes apart, a drop is the
-                        // normal resting state, not a fault - the next read reconnects.
+                        // Android hangs up 30s after the link opens whatever the traffic: the HCI
+                        // trace shows an explicit host Disconnect, not a supervision timeout, and
+                        // reads every 8s do not postpone it. A game reads the board minutes apart,
+                        // so a dropped link is the resting state rather than a fault - the next
+                        // read reconnects.
                         _state.value = if (device != null && caps != null) {
                             BoardConnectionState.Disconnected(knownDeviceName, caps)
                         } else {
