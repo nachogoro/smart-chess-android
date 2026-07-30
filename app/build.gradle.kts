@@ -66,11 +66,10 @@ dependencies {
     implementation("scp:remote-lichess:0.1.0")
 
     // The native rules library, Android packaging. This AAR bundles the C library's .so and the JNA
-    // AAR (libjnidispatch.so), so the app needs no manual native setup: no committed jniLibs, no
-    // separate JNA dependency, no resource stripping. It carries the same `simplechess` classes the
-    // scp modules compile against; the plain jar they pull transitively is dropped (see below) to
-    // avoid duplicating those classes.
-    implementation("io.github.nachogoro:simplechess-android:1.1.0")
+	// AAR (libjnidispatch.so), so the app needs no manual native setup. The
+	// plain jar they pull transitively is dropped (see below) to avoid
+	// duplicating those classes.
+    implementation("io.github.nachogoro:simplechess-android:1.1.1")
 
     // --- Coroutines / AndroidX ---
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
@@ -104,7 +103,7 @@ dependencies {
 
     // Direct access to the raw simplechess Game API for the native tests. The AAR (not the jar,
     // which is excluded below) so the test resolves the same artifact the app ships.
-    androidTestImplementation("io.github.nachogoro:simplechess-android:1.1.0")
+    androidTestImplementation("io.github.nachogoro:simplechess-android:1.1.1")
 }
 
 // The scp modules pull the plain `simplechess` jar transitively; the simplechess-android AAR above
