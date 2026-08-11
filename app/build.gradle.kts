@@ -69,7 +69,7 @@ dependencies {
 	// AAR (libjnidispatch.so), so the app needs no manual native setup. The
 	// plain jar they pull transitively is dropped (see below) to avoid
 	// duplicating those classes.
-    implementation("io.github.nachogoro:simplechess-android:1.1.1")
+    implementation("io.github.nachogoro:simplechess-android:2.0.0")
 
     // --- Coroutines / AndroidX ---
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
@@ -110,7 +110,7 @@ dependencies {
 
     // Direct access to the raw simplechess Game API for the native tests. The AAR (not the jar,
     // which is excluded below) so the test resolves the same artifact the app ships.
-    androidTestImplementation("io.github.nachogoro:simplechess-android:1.1.1")
+    androidTestImplementation("io.github.nachogoro:simplechess-android:2.0.0")
 }
 
 // The scp modules pull the plain `simplechess` jar transitively; the simplechess-android AAR above
