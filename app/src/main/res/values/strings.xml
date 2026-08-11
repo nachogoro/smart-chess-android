@@ -112,6 +112,12 @@
     <!-- The board\'s advertised name, or connect_the_board when it has none. -->
     <string name="connect_connecting">Connecting to %1$s\u2026</string>
     <string name="connect_connected">Connected to %1$s.</string>
+    <!-- Shown while the system pairing dialog is up. The board's advertised name, or connect_the_board. -->
+    <string name="connect_pairing">Pairing with %1$s. Android will ask for a PIN: it is printed in the board\'s documentation.</string>
+    <string name="connect_pairing_refused">The board was not paired. It only shares the position with a paired phone, so pair again and enter the PIN from the board\'s documentation.</string>
+    <string name="connect_pairing_timed_out">Pairing was not confirmed in time. Try again, and accept the request as soon as it appears.</string>
+    <string name="connect_stale_bond">This phone is paired with the board, but the board no longer accepts that pairing. Forget the board in Bluetooth settings, then pair it again.</string>
+    <string name="connect_forget_board">Open Bluetooth settings</string>
     <string name="connect_the_board">the board</string>
     <string name="connect_needs_permission">Smart Chess needs Bluetooth permission to find your board. It never uses your location.</string>
     <string name="connect_bluetooth_off">Bluetooth is switched off. Turn it on to reach the board.</string>

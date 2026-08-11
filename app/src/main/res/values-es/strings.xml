@@ -103,6 +103,12 @@
     <!-- El nombre que anuncia el tablero, o connect_the_board si no tiene. -->
     <string name="connect_connecting">Conectando con %1$s\u2026</string>
     <string name="connect_connected">Conectado a %1$s.</string>
+    <!-- Se muestra mientras está abierto el diálogo de emparejamiento del sistema. El nombre que anuncia el tablero, o connect_the_board. -->
+    <string name="connect_pairing">Emparejando con %1$s. Android pedirá un PIN: viene impreso en la documentación del tablero.</string>
+    <string name="connect_pairing_refused">El tablero no se emparejó. Solo comparte la posición con un teléfono emparejado, así que vuelve a emparejarlo e introduce el PIN de la documentación del tablero.</string>
+    <string name="connect_pairing_timed_out">El emparejamiento no se confirmó a tiempo. Inténtalo de nuevo y acepta la solicitud en cuanto aparezca.</string>
+    <string name="connect_stale_bond">Este teléfono está emparejado con el tablero, pero el tablero ya no acepta ese emparejamiento. Olvida el tablero en los ajustes de Bluetooth y vuelve a emparejarlo.</string>
+    <string name="connect_forget_board">Abrir ajustes de Bluetooth</string>
     <string name="connect_the_board">el tablero</string>
     <string name="connect_needs_permission">Smart Chess necesita permiso de Bluetooth para encontrar tu tablero. Nunca usa tu ubicación.</string>
     <string name="connect_bluetooth_off">El Bluetooth está apagado. Enciéndelo para llegar al tablero.</string>

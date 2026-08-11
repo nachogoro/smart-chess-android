@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nachogoro.smartchess.R
 import com.nachogoro.smartchess.ble.BlePermissions
+import com.nachogoro.smartchess.ble.BoardConnectionFailure
 import com.nachogoro.smartchess.ble.BoardConnectionState
 
 /**
@@ -45,6 +46,10 @@ import com.nachogoro.smartchess.ble.BoardConnectionState
  * Connecting needs three separate things to be true, and each fails differently, so they are
  * checked and surfaced one at a time: runtime permissions, the Bluetooth radio, and (below
  * Android 12 only) the system location toggle.
+ *
+ * A fourth requirement is the board's, not Android's: its firmware only serves an encrypted link,
+ * so the phone has to be paired with it. That step is the user's to complete in a system dialog,
+ * which is why it is narrated here rather than folded into the progress spinner.
  */
 @Composable
 fun ConnectionScreen(
@@ -120,15 +125,23 @@ fun ConnectionScreen(
 
         Spacer(Modifier.height(12.dp))
 
+        val theBoard = stringResource(R.string.connect_the_board)
+
+        // The reported state is checked before isConnecting, which is true for the whole attempt
+        // and would otherwise describe every step of it as "searching" - including pairing, where
+        // the user is being waited on and needs to be told so.
         val message = when {
-            isConnecting || state is BoardConnectionState.Scanning ->
-                stringResource(R.string.connect_searching)
+            state is BoardConnectionState.Pairing ->
+                stringResource(R.string.connect_pairing, state.deviceName ?: theBoard)
 
             state is BoardConnectionState.Connecting ->
-                stringResource(R.string.connect_connecting, state.deviceName ?: stringResource(R.string.connect_the_board))
+                stringResource(R.string.connect_connecting, state.deviceName ?: theBoard)
 
             state is BoardConnectionState.Identified ->
-                stringResource(R.string.connect_connected, state.deviceName ?: stringResource(R.string.connect_the_board))
+                stringResource(R.string.connect_connected, state.deviceName ?: theBoard)
+
+            isConnecting || state is BoardConnectionState.Scanning ->
+                stringResource(R.string.connect_searching)
 
             !permissionsGranted ->
                 stringResource(R.string.connect_needs_permission)
@@ -139,7 +152,20 @@ fun ConnectionScreen(
             !locationEnabled ->
                 stringResource(R.string.connect_needs_location)
 
-            state is BoardConnectionState.Failed -> state.reason
+            // The connection layer reports a code for what only the user can fix, and its own
+            // message for everything else, which is diagnostic rather than advice.
+            state is BoardConnectionState.Failed -> when (state.kind) {
+                BoardConnectionFailure.PAIRING_REFUSED ->
+                    stringResource(R.string.connect_pairing_refused)
+
+                BoardConnectionFailure.PAIRING_TIMED_OUT ->
+                    stringResource(R.string.connect_pairing_timed_out)
+
+                BoardConnectionFailure.STALE_BOND ->
+                    stringResource(R.string.connect_stale_bond)
+
+                BoardConnectionFailure.GENERIC -> state.reason
+            }
 
             else -> stringResource(R.string.connect_ready)
         }
@@ -153,7 +179,12 @@ fun ConnectionScreen(
 
         Spacer(Modifier.height(32.dp))
 
-        if (isConnecting || state is BoardConnectionState.Scanning || state is BoardConnectionState.Connecting) {
+        val inProgress = isConnecting ||
+            state is BoardConnectionState.Scanning ||
+            state is BoardConnectionState.Pairing ||
+            state is BoardConnectionState.Connecting
+
+        if (inProgress) {
             CircularProgressIndicator()
         } else {
             when {
@@ -176,14 +207,33 @@ fun ConnectionScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.connect_open_location_settings)) }
 
-                else -> Button(
-                    onClick = onConnect,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        if (state is BoardConnectionState.Failed) stringResource(R.string.connect_try_again)
-                        else stringResource(R.string.connect_find_board)
-                    )
+                else -> {
+                    // A pairing the board has stopped accepting can only be deleted from system
+                    // settings - there is no public API for it - so retrying alone would loop.
+                    if (state is BoardConnectionState.Failed &&
+                        state.kind == BoardConnectionFailure.STALE_BOND
+                    ) {
+                        Button(
+                            onClick = {
+                                enableBluetoothLauncher.launch(
+                                    Intent(Settings.ACTION_BLUETOOTH_SETTINGS)
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(stringResource(R.string.connect_forget_board)) }
+
+                        Spacer(Modifier.height(8.dp))
+                    }
+
+                    Button(
+                        onClick = onConnect,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            if (state is BoardConnectionState.Failed) stringResource(R.string.connect_try_again)
+                            else stringResource(R.string.connect_find_board)
+                        )
+                    }
                 }
             }
         }

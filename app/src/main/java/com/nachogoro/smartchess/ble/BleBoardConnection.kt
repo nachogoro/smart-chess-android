@@ -50,10 +50,38 @@ private const val RECONNECT_ATTEMPT_TIMEOUT_MS = 4_000L
 private const val RECONNECT_ATTEMPTS = 3
 private const val RECONNECT_RETRY_DELAY_MS = 500L
 
+/**
+ * Budget for pairing, which waits on a person rather than on a radio: the PIN is printed in the
+ * board's documentation, and the user has to find it and type it into a system dialog.
+ */
+private const val BOND_TIMEOUT_MS = 120_000L
+
+/** How often to ask the adapter whether pairing has settled. */
+private const val BOND_POLL_INTERVAL_MS = 250L
+
+/**
+ * GATT statuses that mean the link is not secured well enough for what was attempted.
+ *
+ * 5 and 15 are the Bluetooth spec's insufficient-authentication and insufficient-encryption
+ * errors. 137 is Android's own `GATT_AUTH_FAIL`, reported when the stack's attempt to raise
+ * security on the fly fails; it has no public constant, hence the literals.
+ */
+private val AUTH_FAILURE_STATUSES = setOf(5, 15, 137)
+
 /** Lifecycle of the link to the physical board, as far as the UI is concerned. */
 sealed interface BoardConnectionState {
     data object Idle : BoardConnectionState
     data object Scanning : BoardConnectionState
+
+    /**
+     * Waiting for the user to complete the system pairing dialog.
+     *
+     * Kept apart from [Connecting] because it is the one step that blocks on a person: the board
+     * requires an encrypted link before it will serve any characteristic, so the PIN has to be
+     * accepted before there is anything to read.
+     */
+    data class Pairing(val deviceName: String?) : BoardConnectionState
+
     data class Connecting(val deviceName: String?) : BoardConnectionState
     /**
      * A board that has been found and validated.
@@ -84,12 +112,46 @@ sealed interface BoardConnectionState {
         override val capabilities: BoardCapabilitiesPacket,
     ) : Identified
 
-    /** Terminal-ish: the user is expected to retry. [recoverable] drives whether we offer that. */
-    data class Failed(val reason: String, val recoverable: Boolean = true) : BoardConnectionState
+    /**
+     * Terminal-ish: the user is expected to retry. [recoverable] drives whether we offer that.
+     *
+     * [kind] is what the UI words; [reason] is a diagnostic for the log and for the failures that
+     * have nothing more specific to say than their own message.
+     */
+    data class Failed(
+        val reason: String,
+        val recoverable: Boolean = true,
+        val kind: BoardConnectionFailure = BoardConnectionFailure.GENERIC,
+    ) : BoardConnectionState
 }
 
+/**
+ * Why a connection attempt failed, as a code rather than a sentence.
+ *
+ * Only the pairing failures are enumerated, because they are the ones the user fixes from outside
+ * the app and each needs different advice. [STALE_BOND] in particular cannot be told apart from
+ * [PAIRING_REFUSED] by the error the stack reports - only by whether a pairing already exists -
+ * and the two call for opposite actions: pair again, versus delete the pairing first.
+ */
+enum class BoardConnectionFailure { GENERIC, PAIRING_REFUSED, PAIRING_TIMED_OUT, STALE_BOND }
+
 /** Raised when a GATT operation fails; surfaced to the SCP layer as a BoardError. */
-class BleOperationException(message: String) : Exception(message)
+open class BleOperationException(message: String) : Exception(message)
+
+/**
+ * A read the board refused on security grounds.
+ *
+ * Separate from a plain [BleOperationException] because the usual remedy - drop the link and
+ * reconnect - cannot help: the link was up and working, and it is the pairing behind it that the
+ * board rejected.
+ */
+class BleAuthenticationException(message: String) : BleOperationException(message)
+
+/** Pairing did not complete. Carries the advice to give, which the outcome alone does not. */
+class BoardPairingException(
+    message: String,
+    val failure: BoardConnectionFailure,
+) : Exception(message)
 
 /**
  * Owns the BLE link to the board: scanning, connecting, service discovery and characteristic
@@ -161,6 +223,14 @@ class BleBoardConnection(context: Context) {
     /** Capabilities of the identified board, available even while disconnected. */
     val capabilities: BoardCapabilitiesPacket? get() = knownCapabilities
 
+    /**
+     * Whether the OS holds a pairing for the identified board.
+     *
+     * The pairing belongs to the system, not to this app: it outlives the process and a reinstall,
+     * and it is removed from Bluetooth settings rather than from here.
+     */
+    val isBonded: Boolean get() = knownDevice?.bondState == BluetoothDevice.BOND_BONDED
+
     /** True when Bluetooth exists on the device and is currently switched on. */
     fun isBluetoothEnabled(): Boolean = adapter?.isEnabled == true
 
@@ -191,6 +261,11 @@ class BleBoardConnection(context: Context) {
             _state.value = BoardConnectionState.Scanning
             val device = withTimeout(scanTimeoutMs) { scanForBoard() }
 
+            // Before the link, not in response to a failed read: the board serves nothing over an
+            // unencrypted link, so an unpaired board fails at the first read with an
+            // authentication error that says nothing about what the user should do.
+            ensureBonded(device)
+
             _state.value = BoardConnectionState.Connecting(device.safeName())
             connectGatt(device, INITIAL_CONNECT_TIMEOUT_MS)
 
@@ -218,6 +293,20 @@ class BleBoardConnection(context: Context) {
             stopScan()
             close()
             fail("No board found. Make sure it is powered on and nearby.")
+        } catch (e: BoardPairingException) {
+            stopScan()
+            close()
+            fail(e.message ?: "Pairing did not complete", kind = e.failure)
+        } catch (e: BleAuthenticationException) {
+            // The board was reached and paired, and still refused to be read: the pairing the OS
+            // holds is not one the board recognises. Firmware built with BLE security on rejects
+            // the bond a phone kept from before it was enabled.
+            stopScan()
+            close()
+            fail(
+                e.message ?: "The board rejected this phone's pairing",
+                kind = BoardConnectionFailure.STALE_BOND,
+            )
         } catch (e: Exception) {
             stopScan()
             close()
@@ -264,8 +353,12 @@ class BleBoardConnection(context: Context) {
 
     // ---- internals -------------------------------------------------------------------------
 
-    private fun fail(reason: String, recoverable: Boolean = true): Result<Unit> {
-        _state.value = BoardConnectionState.Failed(reason, recoverable)
+    private fun fail(
+        reason: String,
+        recoverable: Boolean = true,
+        kind: BoardConnectionFailure = BoardConnectionFailure.GENERIC,
+    ): Result<Unit> {
+        _state.value = BoardConnectionState.Failed(reason, recoverable, kind)
         return Result.failure(BleOperationException(reason))
     }
 
@@ -321,6 +414,70 @@ class BleBoardConnection(context: Context) {
         runCatching { adapter?.bluetoothLeScanner?.stopScan(callback) }
     }
 
+    /**
+     * Pairs with the board unless the OS is already paired with it.
+     *
+     * Pairing is driven explicitly rather than left to the stack, which will raise security by
+     * itself when a read demands it. That implicit path is unusable here for two reasons: it is
+     * not observable, so there is no moment at which to tell the user a dialog is about to appear,
+     * and when it fails the only trace is an authentication error on a read.
+     *
+     * Waits on [BluetoothDevice.ACTION_BOND_STATE_CHANGED] because [BluetoothDevice.createBond]
+     * only reports that the request was accepted, not that pairing succeeded.
+     */
+    private suspend fun ensureBonded(device: BluetoothDevice) {
+        if (device.bondState == BluetoothDevice.BOND_BONDED) return
+
+        _state.value = BoardConnectionState.Pairing(device.safeName())
+        Log.i(TAG, "Pairing with ${device.address}")
+
+        if (!device.createBond()) {
+            throw BoardPairingException(
+                "Could not start pairing with the board",
+                BoardConnectionFailure.PAIRING_REFUSED,
+            )
+        }
+
+        // The outcome is polled rather than taken from ACTION_BOND_STATE_CHANGED. That broadcast
+        // is the documented signal, but a receiver registered for it here never saw the board's
+        // transition on Android 16, which left a pairing that had in fact succeeded looking like
+        // one that never finished. The adapter's own bond state is authoritative, local, and cheap
+        // to ask, so it is asked directly.
+        val bonded = try {
+            withTimeout(BOND_TIMEOUT_MS) {
+                var seenBonding = false
+                var outcome: Boolean? = null
+                while (outcome == null) {
+                    when (device.bondState) {
+                        BluetoothDevice.BOND_BONDED -> outcome = true
+                        BluetoothDevice.BOND_BONDING -> seenBonding = true
+                        // Not yet paired is also where this started, so it only means refused once
+                        // pairing has been seen under way. Watching for that transition is what
+                        // keeps the first poll from reporting failure before the stack has moved.
+                        else -> if (seenBonding) outcome = false
+                    }
+                    if (outcome == null) delay(BOND_POLL_INTERVAL_MS)
+                }
+                outcome == true
+            }
+        } catch (_: TimeoutCancellationException) {
+            throw BoardPairingException(
+                "Pairing with the board timed out",
+                BoardConnectionFailure.PAIRING_TIMED_OUT,
+            )
+        }
+
+        if (!bonded) {
+            // A dismissed dialog and a wrong PIN both end as a return to unpaired, so the advice
+            // given for this has to cover both.
+            throw BoardPairingException(
+                "Pairing with the board was not completed",
+                BoardConnectionFailure.PAIRING_REFUSED,
+            )
+        }
+        Log.i(TAG, "Paired with ${device.address}")
+    }
+
     private suspend fun connectGatt(device: BluetoothDevice, timeoutMs: Long) {
         val deferred = CompletableDeferred<Unit>()
         pendingConnection = deferred
@@ -348,6 +505,18 @@ class BleBoardConnection(context: Context) {
         ensureConnected()
         try {
             readLocked(uuid)
+        } catch (auth: BleAuthenticationException) {
+            // Reconnecting cannot fix this. The link was up and the board refused the read on
+            // security grounds, and ensureConnected has already established that a pairing
+            // exists - so it is a pairing the board no longer accepts, and only the user can
+            // clear it. Published rather than just thrown, because a game reads the board from
+            // deep inside a move and this needs an instruction, not a failed move.
+            Log.w(TAG, "Board refused a read despite being paired: ${auth.message}")
+            _state.value = BoardConnectionState.Failed(
+                auth.message ?: "The board rejected this phone's pairing",
+                kind = BoardConnectionFailure.STALE_BOND,
+            )
+            throw auth
         } catch (first: BleOperationException) {
             // A link that died while idle only reveals itself when the next read is attempted, so
             // one reconnect-and-retry turns the expected case into a slower read rather than a
@@ -371,6 +540,10 @@ class BleBoardConnection(context: Context) {
 
         val device = knownDevice ?: throw BleOperationException("Board is not connected")
         val caps = knownCapabilities ?: throw BleOperationException("Board is not connected")
+
+        // A pairing the user deleted from Bluetooth settings while the app was running would
+        // otherwise surface as an unexplained failure on the next move.
+        ensureBonded(device)
 
         Log.i(TAG, "Reconnecting to remembered board ${device.address}")
         // Deliberately not published as Connecting: a reconnect happens on the way to serving a
@@ -522,6 +695,11 @@ class BleBoardConnection(context: Context) {
             val deferred = pendingRead ?: return
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 deferred.complete(value.copyOf())
+            } else if (status in AUTH_FAILURE_STATUSES) {
+                Log.w(TAG, "Characteristic read refused on security grounds (status $status)")
+                deferred.completeExceptionally(
+                    BleAuthenticationException("The board rejected this phone's pairing")
+                )
             } else {
                 Log.w(TAG, "Characteristic read failed with status $status")
                 deferred.completeExceptionally(
