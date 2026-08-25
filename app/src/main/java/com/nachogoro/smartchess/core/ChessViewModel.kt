@@ -285,6 +285,10 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { settingsRepository.setAnnounceOpponentMoves(enabled) }
     }
 
+    fun setBoardDebugUnlocked(unlocked: Boolean) {
+        viewModelScope.launch { settingsRepository.setBoardDebugUnlocked(unlocked) }
+    }
+
     override fun onCleared() {
         super.onCleared()
         // Release the board so another phone can connect; the firmware accepts one central only.

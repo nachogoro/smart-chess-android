@@ -25,6 +25,14 @@ data class AppSettings(
     val moduleSettings: Map<String, Map<String, String>> = emptyMap(),
     /** Whether the opponent's moves are read out loud as well as shown. */
     val announceOpponentMoves: Boolean = true,
+    /**
+     * Whether the board debug screen is offered on the main menu.
+     *
+     * Off until someone taps the board heading in Settings for it, the way Android hides its
+     * developer options: it is a diagnostic for checking the hardware, and a player who is not
+     * looking for it has no use for an entry that reads raw packets.
+     */
+    val boardDebugUnlocked: Boolean = false,
 ) {
     fun settingsFor(moduleName: String): Map<String, String> = moduleSettings[moduleName].orEmpty()
 
@@ -41,6 +49,7 @@ class SettingsRepository(context: Context) {
             playerName = prefs[KEY_PLAYER_NAME].orEmpty(),
             moduleSettings = decodeModuleSettings(prefs[KEY_MODULE_SETTINGS]),
             announceOpponentMoves = prefs[KEY_ANNOUNCE_OPPONENT_MOVES] ?: true,
+            boardDebugUnlocked = prefs[KEY_BOARD_DEBUG_UNLOCKED] ?: false,
         )
     }
 
@@ -50,6 +59,10 @@ class SettingsRepository(context: Context) {
 
     suspend fun setAnnounceOpponentMoves(enabled: Boolean) {
         dataStore.edit { it[KEY_ANNOUNCE_OPPONENT_MOVES] = enabled }
+    }
+
+    suspend fun setBoardDebugUnlocked(unlocked: Boolean) {
+        dataStore.edit { it[KEY_BOARD_DEBUG_UNLOCKED] = unlocked }
     }
 
     /**
@@ -89,5 +102,6 @@ class SettingsRepository(context: Context) {
         val KEY_PLAYER_NAME = stringPreferencesKey("player_name")
         val KEY_MODULE_SETTINGS = stringPreferencesKey("module_settings")
         val KEY_ANNOUNCE_OPPONENT_MOVES = booleanPreferencesKey("announce_opponent_moves")
+        val KEY_BOARD_DEBUG_UNLOCKED = booleanPreferencesKey("board_debug_unlocked")
     }
 }
