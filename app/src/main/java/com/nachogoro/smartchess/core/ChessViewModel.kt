@@ -8,6 +8,9 @@ import com.nachogoro.smartchess.CHESS_LOG_TAG
 import com.nachogoro.smartchess.ble.BleBoardConnection
 import com.nachogoro.smartchess.ble.BleBoardModule
 import com.nachogoro.smartchess.ble.BoardConnectionState
+import com.nachogoro.smartchess.ble.PacketResult
+import com.nachogoro.smartchess.ble.SquareReading
+import com.nachogoro.smartchess.ble.parseBoardState
 import com.nachogoro.smartchess.data.AppSettings
 import com.nachogoro.smartchess.data.GameHistoryRepository
 import com.nachogoro.smartchess.data.GameRecord
@@ -46,7 +49,24 @@ enum class Screen {
     GAME_SETUP,
     GAME,
     HISTORY,
+    BOARD_DEBUG,
 }
+
+/**
+ * One raw read of the board, for the debug screen.
+ *
+ * Keeps the bytes as they arrived beside what they decoded to, because checking the second
+ * against the first is the whole point of that screen. [index] counts the reads of this session:
+ * two consecutive readings of an untouched board are otherwise indistinguishable, and telling
+ * "the read did nothing" from "the board did not change" is exactly what is being verified.
+ */
+data class BoardReading(
+    val index: Int,
+    val bytes: ByteArray,
+    val squares: Map<String, SquareReading>?,
+    /** Why the read or the decode failed, in the words of whatever rejected it. Null on success. */
+    val error: String?,
+)
 
 /**
  * Owns the SCP stack for the lifetime of the app.
@@ -109,6 +129,12 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _isConnecting = MutableStateFlow(false)
     val isConnecting: StateFlow<Boolean> = _isConnecting.asStateFlow()
+
+    private val _boardReading = MutableStateFlow<BoardReading?>(null)
+    val boardReading: StateFlow<BoardReading?> = _boardReading.asStateFlow()
+
+    private val _isReadingBoard = MutableStateFlow(false)
+    val isReadingBoard: StateFlow<Boolean> = _isReadingBoard.asStateFlow()
 
     // The orchestrator exposes `state` and `session` as plain mutable properties rather than
     // flows, so they are polled and mirrored here for Compose to observe.
@@ -176,6 +202,7 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
 
     fun openSettings() { _screen.value = Screen.SETTINGS }
     fun openHistory() { _screen.value = Screen.HISTORY }
+    fun openBoardDebug() { _screen.value = Screen.BOARD_DEBUG }
 
     fun deleteGame(gameId: String) {
         viewModelScope.launch { historyRepository.delete(gameId) }
@@ -269,6 +296,37 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
     fun abort() {
         val gameId = _session.value?.gameId ?: return
         viewModelScope.launch { uiModule.requestAbort(gameId) }
+    }
+
+    // -- Board debug --
+
+    /**
+     * Reads the board once and keeps the packet alongside its decoding.
+     *
+     * Goes to the connection rather than through [BleBoardModule] on purpose: the module refuses a
+     * reading that contains an unreadable square, and an unreadable square is one of the things
+     * this screen exists to show. Nothing here touches the orchestrator, so a read is safe to make
+     * at any time - though on a simulated board it still advances the script by one move.
+     */
+    fun readBoardForDebug() {
+        if (_isReadingBoard.value) return
+        viewModelScope.launch {
+            _isReadingBoard.value = true
+            val index = (_boardReading.value?.index ?: 0) + 1
+            try {
+                val bytes = connection.readBoardState()
+                Log.i(CHESS_LOG_TAG, "Debug read #$index: ${bytes.size} bytes")
+                _boardReading.value = when (val parsed = parseBoardState(bytes)) {
+                    is PacketResult.Ok -> BoardReading(index, bytes, parsed.value, null)
+                    // The bytes are kept even when they do not decode: they are the evidence.
+                    is PacketResult.Invalid -> BoardReading(index, bytes, null, parsed.reason)
+                }
+            } catch (e: Exception) {
+                _boardReading.value = BoardReading(index, ByteArray(0), null, e.message ?: e.toString())
+            } finally {
+                _isReadingBoard.value = false
+            }
+        }
     }
 
     // -- Settings --

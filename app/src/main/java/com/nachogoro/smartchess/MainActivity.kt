@@ -15,6 +15,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nachogoro.smartchess.core.ChessViewModel
 import com.nachogoro.smartchess.core.Screen
 import com.nachogoro.smartchess.data.AppLanguage
+import com.nachogoro.smartchess.ble.BoardConnectionState
+import com.nachogoro.smartchess.ui.screens.BoardDebugScreen
 import com.nachogoro.smartchess.ui.screens.ConnectionScreen
 import com.nachogoro.smartchess.ui.screens.GameScreen
 import com.nachogoro.smartchess.ui.screens.GameSetupScreen
@@ -48,6 +50,8 @@ private fun SmartChessApp(viewModel: ChessViewModel = viewModel()) {
     val orchestratorState by viewModel.orchestratorState.collectAsState()
     val setupMode by viewModel.setupMode.collectAsState()
     val playedGames by viewModel.playedGames.collectAsState()
+    val boardReading by viewModel.boardReading.collectAsState()
+    val isReadingBoard by viewModel.isReadingBoard.collectAsState()
 
     when (screen) {
         Screen.CONNECTION -> ConnectionScreen(
@@ -64,6 +68,8 @@ private fun SmartChessApp(viewModel: ChessViewModel = viewModel()) {
             onSelectMode = viewModel::startGame,
             onHistory = viewModel::openHistory,
             onSettings = viewModel::openSettings,
+            showBoardDebug = settings.boardDebugUnlocked,
+            onBoardDebug = viewModel::openBoardDebug,
             onReconnect = viewModel::connectToBoard,
         )
 
@@ -109,6 +115,19 @@ private fun SmartChessApp(viewModel: ChessViewModel = viewModel()) {
                 onOfferDraw = viewModel::offerDraw,
                 onAbort = viewModel::abort,
                 onGameEnd = viewModel::onGameFinished,
+            )
+        }
+
+        Screen.BOARD_DEBUG -> {
+            BackHandler { viewModel.backToMenu() }
+            BoardDebugScreen(
+                reading = boardReading,
+                isReading = isReadingBoard,
+                // Identified rather than Ready, as on the menu: the link is down between reads by
+                // design and the read itself brings it back up.
+                boardReady = connectionState is BoardConnectionState.Identified,
+                onRead = viewModel::readBoardForDebug,
+                onBack = viewModel::backToMenu,
             )
         }
 

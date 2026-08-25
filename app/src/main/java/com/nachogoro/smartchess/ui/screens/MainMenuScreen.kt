@@ -41,6 +41,8 @@ fun MainMenuScreen(
     onSelectMode: (GameMode) -> Unit,
     onHistory: () -> Unit,
     onSettings: () -> Unit,
+    showBoardDebug: Boolean,
+    onBoardDebug: () -> Unit,
     onReconnect: () -> Unit,
 ) {
     // Identified, not Ready: the link is down between moves by design, and the next board read
@@ -86,6 +88,15 @@ fun MainMenuScreen(
         Spacer(Modifier.height(12.dp))
         OutlinedButton(onClick = onSettings, modifier = Modifier.fillMaxWidth().height(48.dp)) {
             Text(stringResource(R.string.menu_settings))
+        }
+        // Hidden until it is asked for by tapping the board heading in Settings: it is a hardware
+        // diagnostic, not something to offer a player. Reachable without a board once shown - the
+        // screen says so itself, and getting there is how you find out whether the board reads.
+        if (showBoardDebug) {
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(onClick = onBoardDebug, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                Text(stringResource(R.string.menu_board_debug))
+            }
         }
     }
 }

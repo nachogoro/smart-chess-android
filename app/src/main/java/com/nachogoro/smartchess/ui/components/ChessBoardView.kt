@@ -22,8 +22,8 @@ import com.nachogoro.smartchess.R
 import scp.protocol.Color as ChessColor
 import scp.protocol.PieceType
 
-private val LIGHT_SQUARE = Color(0xFFF0D9B5)
-private val DARK_SQUARE = Color(0xFFB58863)
+internal val LIGHT_SQUARE = Color(0xFFF0D9B5)
+internal val DARK_SQUARE = Color(0xFFB58863)
 
 data class BoardPiece(val type: PieceType, val color: ChessColor)
 

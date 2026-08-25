@@ -243,4 +243,32 @@
     <string name="history_cancel">Cancelar</string>
     <!-- Fecha y hora en que terminó la partida, en la lista. -->
     <string name="history_date_format" translatable="false">d MMM yyyy, HH:mm</string>
+
+    <!--
+      Board debug: a raw read of the physical board, shown as the bytes that arrived and as the
+      position they decode to. It exists to check the app against the real sensor, so it reports
+      what came back rather than what a game would accept.
+    -->
+    <string name="menu_board_debug">Depurar tablero</string>
+    <string name="debug_title">Lectura del tablero</string>
+    <string name="debug_back">Atrás</string>
+    <string name="debug_read">Leer tablero</string>
+    <string name="debug_reading">Leyendo\u2026</string>
+    <string name="debug_no_reading">Aún no hay ninguna lectura. Pulsa Leer tablero.</string>
+    <string name="debug_needs_board">Conecta el tablero para poder leerlo.</string>
+    <string name="debug_bytes">Bytes recibidos</string>
+    <string name="debug_decoded">Descodificado</string>
+    <!-- Which read this is, since two identical readings are otherwise indistinguishable. -->
+    <string name="debug_read_index">Lectura n.º %1$d</string>
+    <!-- White squares, black squares, empty squares, unreadable squares. -->
+    <string name="debug_counts">%1$d blancas, %2$d negras, %3$d vacías, %4$d ilegibles</string>
+    <!-- The reason the board could not be read, as reported by the connection. -->
+    <string name="debug_read_failed">Fallo al leer: %1$s</string>
+    <!-- The reason the packet could not be decoded. -->
+    <string name="debug_decode_failed">No se ha podido descodificar el paquete: %1$s</string>
+    <string name="debug_square_white">Blanca</string>
+    <string name="debug_square_black">Negra</string>
+    <string name="debug_square_unknown">Ilegible</string>
+    <!-- A square's reading and the square it was read from. -->
+    <string name="debug_square_at">%1$s en %2$s</string>
 </resources>
