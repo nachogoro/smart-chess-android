@@ -1,5 +1,7 @@
 package com.nachogoro.smartchess.ui.screens
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,11 +24,13 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -51,9 +55,14 @@ fun SettingsScreen(
     onSavePlayerName: (String) -> Unit,
     onSetAnnounceOpponentMoves: (Boolean) -> Unit,
     onClearModuleSettings: (String) -> Unit,
+    onSetBoardDebugUnlocked: (Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
     var playerName by remember(settings.playerName) { mutableStateOf(settings.playerName) }
+
+    // Counted here rather than persisted: leaving the screen abandons a half-finished attempt,
+    // which is what keeps a few idle taps on a heading from ever adding up to an unlock.
+    var boardHeadingTaps by remember { mutableIntStateOf(0) }
 
     Column(
         modifier = Modifier
@@ -135,7 +144,34 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        Text(stringResource(R.string.settings_board_heading), style = MaterialTheme.typography.titleMedium)
+        // The way Android hides its developer options: the debug screen is a hardware diagnostic,
+        // so it stays off the menu until somebody taps this heading enough times to mean it.
+        Text(
+            stringResource(R.string.settings_board_heading),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.clickable(
+                // No ripple: a heading that lights up under a finger invites the tapping this is
+                // meant to stay hidden from.
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) {
+                if (settings.boardDebugUnlocked) return@clickable
+                boardHeadingTaps++
+                if (boardHeadingTaps >= BOARD_DEBUG_TAPS) onSetBoardDebugUnlocked(true)
+            },
+        )
+
+        // Silent until the end is in sight, so that a stray tap gives nothing away.
+        val tapsLeft = BOARD_DEBUG_TAPS - boardHeadingTaps
+        if (!settings.boardDebugUnlocked && tapsLeft in 1..BOARD_DEBUG_COUNTDOWN_FROM) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                pluralStringResource(R.plurals.settings_debug_countdown, tapsLeft, tapsLeft),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
         Spacer(Modifier.height(8.dp))
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -168,6 +204,24 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+        }
+
+        // Only ever seen by someone who unlocked it, and their way back out: an easter egg with no
+        // way to undo it is a setting the user cannot reach.
+        if (settings.boardDebugUnlocked) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(R.string.settings_debug_unlocked),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = {
+                boardHeadingTaps = 0
+                onSetBoardDebugUnlocked(false)
+            }) {
+                Text(stringResource(R.string.settings_debug_hide))
             }
         }
 
@@ -221,6 +275,10 @@ fun SettingsScreen(
         }
     }
 }
+
+/** Taps on the board heading that reveal the debug screen, and when to start counting down. */
+private const val BOARD_DEBUG_TAPS = 7
+private const val BOARD_DEBUG_COUNTDOWN_FROM = 3
 
 @Composable
 private fun com.nachogoro.smartchess.ble.BoardCapabilitiesPacket.capabilityLevelLabel(): String =

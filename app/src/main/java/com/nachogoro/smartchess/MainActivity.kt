@@ -85,6 +85,7 @@ private fun SmartChessApp(viewModel: ChessViewModel = viewModel()) {
                 onSavePlayerName = viewModel::savePlayerName,
                 onSetAnnounceOpponentMoves = viewModel::setAnnounceOpponentMoves,
                 onClearModuleSettings = { viewModel.saveModuleSettings(it, emptyMap()) },
+                onSetBoardDebugUnlocked = viewModel::setBoardDebugUnlocked,
                 onBack = viewModel::backToMenu,
             )
         }

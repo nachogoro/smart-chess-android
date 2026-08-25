@@ -271,4 +271,14 @@
     <string name="debug_square_unknown">Ilegible</string>
     <!-- A square's reading and the square it was read from. -->
     <string name="debug_square_at">%1$s en %2$s</string>
+    <!--
+      The board debug screen is unlocked by tapping the board heading, the way Android hides its
+      developer options. The countdown starts only near the end, so a stray tap reveals nothing.
+    -->
+    <plurals name="settings_debug_countdown">
+        <item quantity="one">Falta %1$d toque para que aparezca Depurar tablero en el menú.</item>
+        <item quantity="other">Faltan %1$d toques para que aparezca Depurar tablero en el menú.</item>
+    </plurals>
+    <string name="settings_debug_unlocked">Depurar tablero está en el menú principal.</string>
+    <string name="settings_debug_hide">Ocultar Depurar tablero</string>
 </resources>

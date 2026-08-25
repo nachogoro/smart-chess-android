@@ -280,4 +280,14 @@
     <string name="debug_square_unknown">Unreadable</string>
     <!-- A square's reading and the square it was read from. -->
     <string name="debug_square_at">%1$s on %2$s</string>
+    <!--
+      The board debug screen is unlocked by tapping the board heading, the way Android hides its
+      developer options. The countdown starts only near the end, so a stray tap reveals nothing.
+    -->
+    <plurals name="settings_debug_countdown">
+        <item quantity="one">%1$d more tap and board debug appears on the menu.</item>
+        <item quantity="other">%1$d more taps and board debug appears on the menu.</item>
+    </plurals>
+    <string name="settings_debug_unlocked">Board debug is on the main menu.</string>
+    <string name="settings_debug_hide">Hide board debug</string>
 </resources>
