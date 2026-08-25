@@ -23,6 +23,9 @@ class BleBoardModule(
     private val connection: BleBoardConnection,
 ) : BoardModule {
 
+    /**
+     * Failures that arrive without having been asked for.
+     */
     private val _errors = MutableSharedFlow<BoardError>(extraBufferCapacity = 8)
     override val errors: SharedFlow<BoardError> = _errors
 
@@ -44,17 +47,13 @@ class BleBoardModule(
         } catch (e: Exception) {
             val message = e.message ?: "Could not read the board"
             Log.w(CHESS_LOG_TAG, "Board read failed: $message")
-            val error = BoardError.Disconnected(diagnostic = message)
-            _errors.tryEmit(error)
-            return Result.Failure(error)
+            return Result.Failure(BoardError.Disconnected(diagnostic = message))
         }
 
         val readings = when (val parsed = parseBoardState(raw)) {
             is PacketResult.Invalid -> {
                 Log.w(CHESS_LOG_TAG, "Board packet rejected: ${parsed.reason}")
-                val error = BoardError.SensorFailure(diagnostic = parsed.reason)
-                _errors.tryEmit(error)
-                return Result.Failure(error)
+                return Result.Failure(BoardError.SensorFailure(diagnostic = parsed.reason))
             }
 
             is PacketResult.Ok -> parsed.value
@@ -68,9 +67,7 @@ class BleBoardModule(
         val unknown = readings.filterValues { it == SquareReading.UNKNOWN }.keys.sorted()
         if (unknown.isNotEmpty()) {
             Log.w(CHESS_LOG_TAG, "Board reading rejected, unreadable squares: ${unknown.joinToString(", ")}")
-            val error = BoardError.SensorFailure(unreadableSquares = unknown)
-            _errors.tryEmit(error)
-            return Result.Failure(error)
+            return Result.Failure(BoardError.SensorFailure(unreadableSquares = unknown))
         }
 
         val squares = readings.mapValues { (_, reading) ->
