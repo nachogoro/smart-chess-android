@@ -21,13 +21,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import scp.engine.carballo.CarballoAdapter
 import scp.engine.remote.RemoteStockfishAdapter
@@ -136,13 +134,8 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
     private val _isReadingBoard = MutableStateFlow(false)
     val isReadingBoard: StateFlow<Boolean> = _isReadingBoard.asStateFlow()
 
-    // The orchestrator exposes `state` and `session` as plain mutable properties rather than
-    // flows, so they are polled and mirrored here for Compose to observe.
-    private val _orchestratorState = MutableStateFlow<OrchestratorState>(OrchestratorState.Idle)
-    val orchestratorState: StateFlow<OrchestratorState> = _orchestratorState.asStateFlow()
-
-    private val _session = MutableStateFlow<GameSession?>(null)
-    val session: StateFlow<GameSession?> = _session.asStateFlow()
+    val orchestratorState: StateFlow<OrchestratorState> = orchestrator.stateFlow
+    val session: StateFlow<GameSession?> = orchestrator.sessionFlow
 
     val availableModes: List<GameMode> = buildList {
         add(GameMode.LOCAL)
@@ -164,14 +157,6 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             uiModule.opponentMoved.collect { move ->
                 if (settings.value.announceOpponentMoves) speaker.announce(move)
-            }
-        }
-
-        viewModelScope.launch {
-            while (isActive) {
-                _orchestratorState.value = orchestrator.state
-                _session.value = orchestrator.session
-                delay(POLL_INTERVAL_MS)
             }
         }
     }
@@ -262,14 +247,14 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
      * The player has finished moving on the physical board.
      */
     fun signalMoveReady() {
-        val session = _session.value ?: return
+        val session = this.session.value ?: return
         val color = requesterColor(session) ?: return
         Log.i(CHESS_LOG_TAG, "Move ready; expecting one move from ${session.fen}")
         viewModelScope.launch { uiModule.signalMoveReady(session.gameId, color) }
     }
 
     fun resign() {
-        val session = _session.value ?: return
+        val session = this.session.value ?: return
         val color = requesterColor(session) ?: return
         Log.i(CHESS_LOG_TAG, "Resigning ${session.gameId} on behalf of $color")
         viewModelScope.launch { uiModule.requestResign(session.gameId, color) }
@@ -284,17 +269,17 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
      * and the orchestrator resigns exactly the colour it is given, so this decides who loses.
      */
     private fun requesterColor(session: GameSession): Color? = when (session.mode) {
-        GameMode.LOCAL -> (_orchestratorState.value as? OrchestratorState.AwaitingPlayerMove)?.color
+        GameMode.LOCAL -> (orchestratorState.value as? OrchestratorState.AwaitingPlayerMove)?.color
         GameMode.ENGINE, GameMode.REMOTE -> session.playerColor
     }
 
     fun offerDraw() {
-        val gameId = _session.value?.gameId ?: return
+        val gameId = session.value?.gameId ?: return
         viewModelScope.launch { uiModule.requestDraw(gameId) }
     }
 
     fun abort() {
-        val gameId = _session.value?.gameId ?: return
+        val gameId = session.value?.gameId ?: return
         viewModelScope.launch { uiModule.requestAbort(gameId) }
     }
 
@@ -356,7 +341,4 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
         speaker.shutdown()
     }
 
-    private companion object {
-        const val POLL_INTERVAL_MS = 200L
-    }
 }
