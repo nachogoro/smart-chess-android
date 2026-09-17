@@ -27,12 +27,10 @@ data class PendingRequest<I, O>(
 }
 
 /**
- * The app's [UIModule]. This and the board module are the only platform-specific pieces of the
- * SCP stack; the orchestrator, rules engine and adapters are shared with the desktop build.
+ * The app's [UIModule].
  *
- * State is exposed as Compose snapshot state rather than flows. The orchestrator invokes these
- * methods from its own event-loop coroutine, which is fine: snapshot state is safe to write from
- * any thread, and Compose schedules recomposition on the main thread.
+ * State is exposed as Compose snapshot state rather than flows. Snapshot state is safe
+ * to write from any thread, and Compose schedules recomposition on the main thread.
  */
 class AndroidUIModule : UIModule {
 
