@@ -10,8 +10,7 @@ import java.util.Locale
  *
  * The output targets the export format in the PGN standard: the seven mandatory tags in their
  * required order, a blank line, then the movetext wrapped at 80 columns and terminated by the
- * result. That is what other chess software expects to be able to import, which is the whole point
- * of offering PGN at all.
+ * result.
  */
 fun GameRecord.toPgn(): String {
     val tags = buildList {
@@ -68,8 +67,7 @@ private fun GameRecord.movetext(): String {
  * Converts the stored `TYPE:initialMs:incrementMs` triple into PGN's `seconds+increment`.
  *
  * PGN has no way to express Bronstein or simple delay in this tag, so they are written as if they
- * were Fischer increment: the initial time and increment are still correct, which is what a reader
- * uses the tag for.
+ * were Fischer increment (the initial time and increment are still correct).
  */
 private fun String.toPgnTimeControl(): String {
     val parts = split(':')
@@ -86,14 +84,6 @@ private val PGN_DATE_FORMAT = SimpleDateFormat("yyyy.MM.dd", Locale.ROOT)
 
 /**
  * The PGN `Termination` tag, from the standard's own vocabulary.
- *
- * Not the wording shown on screen: a PGN file is read by other tools, so the tag has to say what
- * the format says it says, in the format's language, whatever the app is set to. That the two
- * happen to be English today is a coincidence worth not relying on.
- *
- * The standard's values are coarser than ours: checkmate, resignation and a draw are all a game
- * that ended "normal" - but the detail is recoverable from the moves and the result, which is
- * presumably why it settled there.
  */
 private fun Termination.toPgnTermination(): String = when (this) {
     Termination.Timeout -> "time forfeit"
