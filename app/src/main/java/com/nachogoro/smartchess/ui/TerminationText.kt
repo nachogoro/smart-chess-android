@@ -8,12 +8,6 @@ import scp.protocol.Termination
 
 /**
  * How a game ended, in words.
- *
- * The wording lives here because the UI module is the only one allowed to write it: every other
- * SCP module reports a code, since none of them can know who is reading.
- *
- * [result] is read because a termination is a cause and nothing more: whether the game was drawn
- * is the result's to say, and it says so even where the cause has no name.
  */
 fun Termination.describe(context: Context, result: GameResult): String = when (this) {
     Termination.Checkmate -> context.getString(R.string.termination_checkmate)
@@ -27,10 +21,7 @@ fun Termination.describe(context: Context, result: GameResult): String = when (t
     Termination.SeventyFiveMoveRule -> context.getString(R.string.draw_seventy_five_move_rule)
     Termination.ThreefoldRepetition -> context.getString(R.string.draw_threefold_repetition)
     Termination.FivefoldRepetition -> context.getString(R.string.draw_fivefold_repetition)
-    // Whoever ended the game named something this build does not know. Their own words, or failing
-    // that their identifier, beats inventing a reason for them, and neither is ours to translate.
-    // A drawn game whose rule nobody named, which is most of what Lichess reports, still reads as
-    // a draw, because the drawn-ness never lived in the cause.
+    // Whoever ended the game named something this build does not know.
     is Termination.Other -> text
         ?: authorityCode
         ?: if (result == GameResult.DRAW) context.getString(R.string.draw_unspecified)
@@ -40,8 +31,7 @@ fun Termination.describe(context: Context, result: GameResult): String = when (t
 /**
  * Who offered a draw, in words.
  *
- * Their name if there is one, since it is theirs and not ours to translate; otherwise the colour,
- * and failing that the opponent. The core sends what it knows and leaves the sentence here.
+ * Their name if there is one; otherwise the colour, and failing that the opponent.
  */
 fun DrawOffer.describe(context: Context): String =
     name ?: when (color) {
