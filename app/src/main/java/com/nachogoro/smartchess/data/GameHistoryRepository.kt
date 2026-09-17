@@ -19,8 +19,8 @@ class GameHistoryRepository(context: Context) {
             GameHistoryDatabase::class.java,
             DATABASE_NAME,
         )
-        // Pre-release: a schema change drops the saved games rather than carrying a migration for
-        // history nobody depends on yet.
+        // Since no release has ever been made, a schema change drops the saved games rather than
+        // carrying a migration
         .fallbackToDestructiveMigration(dropAllTables = true)
         .build()
 
