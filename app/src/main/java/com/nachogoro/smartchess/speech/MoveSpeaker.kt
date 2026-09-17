@@ -33,9 +33,9 @@ class MoveSpeaker(context: Context) {
     /**
      * Held only while the engine starts up.
      *
-     * A move that arrives first is spoken once the engine is ready rather than dropped, and a
-     * newer one replaces it: an announcement is only worth hearing while it is still the position
-     * on the board.
+     * If a move arrives before the engine is ready, we store it here to speak it once we are ready.
+     * A newer one replaces it, as an announcement is only worth hearing while it is still the
+     * position on the board.
      */
     private var pending: Utterance? = null
 
@@ -44,13 +44,13 @@ class MoveSpeaker(context: Context) {
 
     init {
         engine = TextToSpeech(this.context) { status ->
-            // Posted rather than handled inline: the callback may arrive before the constructor
-            // has returned, and `engine` is assigned only once it has.
+            // Posted rather than handled inline to avoid the callback arriving before the
+            // constructor returns (and hence before engine is assigned).
             mainHandler.post { onEngineInit(status) }
         }
     }
 
-    /** Speaks [params], unless the notation cannot be read - in which case it stays silent. */
+    /** Speaks [params] if notation can be read, else stays silent. */
     fun announce(params: ShowOpponentMoveParams) {
         val announcement = parseMoveAnnouncement(params.san, params.move, params.isEnPassant)
             ?: return
@@ -94,26 +94,18 @@ class MoveSpeaker(context: Context) {
             pending = utterance
             return
         }
-        // Set per utterance rather than once at startup: this object outlives a language change,
-        // because the view model owning it survives the activity being recreated. Whatever the
-        // engine makes of the language is accepted: a move read in the wrong accent beats silence.
+        
+        // Set per utterance rather than once at startup because the application can change languages,
+        // and this object is not recreated.
         tts.setLanguage(Locale.forLanguageTag(utterance.languageTag))
-        // Flush rather than queue: one move arrives per turn, so anything still being spoken is a
-        // move the player has already played on the board.
+        
+        // Flush rather than queue (anything old still being spoken can only happen if it is a move
+        // the player has already played on the board).
         tts.speak(utterance.text, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID)
     }
 
     /**
      * Resources in the language the app is set to.
-     *
-     * Not simply the application context: below API 33 AppCompat applies a per-app language to
-     * activities, and the application context can still be reporting the system one. Announcements
-     * would then be spoken in a language the screen is not using.
-     *
-     * The locale still comes from [R.string.announce_locale] rather than from this list, because
-     * the two answer different questions. This says which language was asked for; that says which
-     * one the strings actually resolved to, and with the list empty, or set to a language the app
-     * has no translation for, those differ. The voice has to match the words.
      */
     private fun localizedResources(): Context {
         val locales = AppCompatDelegate.getApplicationLocales()
