@@ -8,9 +8,8 @@ import androidx.core.os.LocaleListCompat
  *
  * Deliberately not part of [AppSettings]. AppCompat already stores this (in the framework on
  * API 33 and later, and in its own preferences below that) and a second copy in DataStore could
- * only ever disagree with the one that actually decides which resources load. Reading it back from
- * AppCompat means the in-app picker and Android 13's own per-app language screen are the same
- * setting rather than two.
+ * only ever disagree. Reading it back from AppCompat means the in-app picker and Android 13's
+ * own per-app language screen are the same setting.
  */
 enum class AppLanguage(val tag: String?) {
     /** Whatever the device is set to, falling back to English where there is no translation. */
@@ -22,9 +21,7 @@ enum class AppLanguage(val tag: String?) {
         /**
          * The language in force.
          *
-         * An empty locale list means no per-app choice has been made, which is [SYSTEM]. A tag the
-         * app no longer ships is treated the same way rather than being reported as something it
-         * cannot honour.
+         * An empty locale list means no per-app choice has been made, which is [SYSTEM].
          */
         fun current(): AppLanguage {
             val tag = AppCompatDelegate.getApplicationLocales()
