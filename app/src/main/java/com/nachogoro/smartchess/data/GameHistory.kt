@@ -20,8 +20,7 @@ import scp.protocol.Termination
  * One finished game.
  *
  * The moves are stored as a JSON column rather than a related table. They are only ever read as a
- * whole, with their game and in order, so a relation would buy nothing and cost a join; the shape
- * of a game record really is "a header and a list".
+ * whole, with their game and in order, so a relation would buy nothing.
  *
  * Each move keeps the position that followed it, which is what makes the move-by-move replay
  * possible without re-deriving anything through the rules engine.
@@ -36,8 +35,7 @@ data class GameRecord(
     @ColumnInfo(name = "player_color") val playerColor: String?,
     val result: String,
     /**
-     * How the game ended, kept as codes so a stored game can be re-worded later rather than being
-     * frozen in the language it was played in.
+     * How the game ended.
      *
      * [authorityCode] and [terminationText] are the unrecognised termination's own identifier and
      * words; only the `OTHER` case carries them.
@@ -138,8 +136,7 @@ abstract class GameHistoryDatabase : RoomDatabase() {
 /**
  * The stored result.
  *
- * An unreadable column reads as [GameResult.IN_PROGRESS] - the protocol's `*`, "no result" - which
- * is what the history screen already shows for one, rather than throwing inside a list row.
+ * An unreadable column reads as [GameResult.IN_PROGRESS].
  */
 fun GameRecord.gameResult(): GameResult =
     GameResult.entries.firstOrNull { it.protocolString == result } ?: GameResult.IN_PROGRESS
@@ -147,8 +144,7 @@ fun GameRecord.gameResult(): GameResult =
 /**
  * Rebuilds the termination a record was written from.
  *
- * A code this build does not recognise becomes `Other`, which is the same thing the protocol asks
- * a UI to do with one it meets over the wire.
+ * A code this build does not recognise becomes `Other`.
  */
 fun GameRecord.termination(): Termination = when (terminationCode) {
     Termination.Checkmate.code -> Termination.Checkmate
