@@ -4,8 +4,7 @@ package com.nachogoro.smartchess.speech
  * A move broken down into the parts an announcement is made of.
  *
  * Deliberately free of any wording: [describe] turns this into a sentence using a
- * [AnnouncementVocabulary], so translating the app means translating the vocabulary and nothing
- * else.
+ * [AnnouncementVocabulary].
  */
 data class MoveAnnouncement(
     val piece: AnnouncedPiece,
@@ -60,20 +59,12 @@ data class AnnouncementVocabulary(
 /**
  * Reads a played move into its spoken parts.
  *
- * [san] carries everything except the full origin square: standard algebraic notation includes a
- * disambiguator only when one is needed, and then only the file or the rank of it. Its presence is
- * the signal that the origin matters; [uci] supplies the whole square, because "knight on e6" is
- * easier to act on at a physical board than "knight on the e file".
- *
  * A pawn capture always carries its file in SAN whether or not another pawn could have made the
- * same capture, so those are always announced with their origin square. That costs two syllables
- * and is never wrong.
+ * same capture, so those are always announced with their origin square.
  *
- * [isEnPassant] cannot be recovered from either notation and is reported separately by the game
- * controller.
+ * [isEnPassant] cannot be recovered from either notation, so needs to be provided separately.
  *
- * Returns null for notation this cannot make sense of, which means the move goes unannounced
- * rather than mis-announced.
+ * Returns null for notation this cannot make sense of.
  */
 fun parseMoveAnnouncement(
     san: String,
