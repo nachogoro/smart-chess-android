@@ -31,28 +31,23 @@ private const val TAG = "BleBoard"
 
 /**
  * The first connect follows a scan, so the board was just seen advertising and the only thing left
- * that can be slow is service discovery. A generous budget costs nothing here.
+ * that can be slow is service discovery.
  */
 private const val INITIAL_CONNECT_TIMEOUT_MS = 20_000L
 
 /**
  * Budget for one attempt at bringing a dropped link back up, and how many attempts to make.
  *
- * Reconnecting to a board that is there takes about a second, so these attempts are for the cases
- * where it is not: they bound what a board that is switched off or out of range costs the caller,
- * and they re-issue the connection rather than sitting on an attempt that has wedged.
- *
- * The board is otherwise always reachable: it advertises continuously, even while a client is
- * connected, and is visible again within about 30ms of a drop. A failure here means the board is
- * genuinely gone rather than briefly unavailable.
+ * The board is generally always reachable and connectable in around a second. It advertises
+ * continuously, even while a client is connected, and is visible again within about 30ms of a
+ * drop. A failure here means the board is genuinely gone rather than briefly unavailable.
  */
 private const val RECONNECT_ATTEMPT_TIMEOUT_MS = 4_000L
 private const val RECONNECT_ATTEMPTS = 3
 private const val RECONNECT_RETRY_DELAY_MS = 500L
 
 /**
- * Budget for pairing, which waits on a person rather than on a radio: the PIN is printed in the
- * board's documentation, and the user has to find it and type it into a system dialog.
+ * Budget for pairing, which must wait on a person inputting the PIN.
  */
 private const val BOND_TIMEOUT_MS = 120_000L
 
@@ -63,8 +58,8 @@ private const val BOND_POLL_INTERVAL_MS = 250L
  * GATT statuses that mean the link is not secured well enough for what was attempted.
  *
  * 5 and 15 are the Bluetooth spec's insufficient-authentication and insufficient-encryption
- * errors. 137 is Android's own `GATT_AUTH_FAIL`, reported when the stack's attempt to raise
- * security on the fly fails; it has no public constant, hence the literals.
+ * errors. 137 is Android's `GATT_AUTH_FAIL`, reported when the stack's attempt to raise
+ * security on the fly fails.
  */
 private val AUTH_FAILURE_STATUSES = setOf(5, 15, 137)
 
@@ -86,8 +81,7 @@ sealed interface BoardConnectionState {
     /**
      * A board that has been found and validated.
      *
-     * Whether the link is up right now is a detail of BLE power management, not something a caller
-     * deciding "can we play?" should have to reason about, so both live and idle links share this
+     * Whether the link is up right now is a detail of BLE power management, so both share this
      * type.
      */
     sealed interface Identified : BoardConnectionState {
@@ -104,8 +98,7 @@ sealed interface BoardConnectionState {
      * The board is identified but the link is down, which is the routine state between moves.
      *
      * A game reads the board minutes apart and the link is torn down within about 30s of the last
-     * operation, so this is not an error: the next read reconnects to the remembered board. Kept
-     * distinct from [Failed] so the UI does not present ordinary idling as something to fix.
+     * operation, so this is expected, and the next read reconnects to the remembered board.
      */
     data class Disconnected(
         override val deviceName: String?,
@@ -115,7 +108,7 @@ sealed interface BoardConnectionState {
     /**
      * Terminal-ish: the user is expected to retry. [recoverable] drives whether we offer that.
      *
-     * [kind] is what the UI words; [reason] is a diagnostic for the log and for the failures that
+     * [kind] is what the UI shows; [reason] is a diagnostic for the log and for the failures that
      * have nothing more specific to say than their own message.
      */
     data class Failed(
@@ -126,13 +119,11 @@ sealed interface BoardConnectionState {
 }
 
 /**
- * Why a connection attempt failed, as a code rather than a sentence.
+ * Why a connection attempt failed.
  *
  * Only the failures the user fixes from outside the app are enumerated, because each needs
  * different advice and the advice is the UI's to word, in the user's language. Everything else
- * is [GENERIC] and carries a diagnostic. [STALE_BOND] in particular cannot be told apart from
- * [PAIRING_REFUSED] by the error the stack reports - only by whether a pairing already exists -
- * and the two call for opposite actions: pair again, versus delete the pairing first.
+ * is [GENERIC] and carries a diagnostic.
  */
 enum class BoardConnectionFailure {
     GENERIC,
@@ -148,14 +139,10 @@ open class BleOperationException(message: String) : Exception(message)
 
 /**
  * A read the board refused on security grounds.
- *
- * Separate from a plain [BleOperationException] because the usual remedy - drop the link and
- * reconnect - cannot help: the link was up and working, and it is the pairing behind it that the
- * board rejected.
  */
 class BleAuthenticationException(message: String) : BleOperationException(message)
 
-/** Pairing did not complete. Carries the advice to give, which the outcome alone does not. */
+/** Pairing did not complete. Carries the advice to give. */
 class BoardPairingException(
     message: String,
     val failure: BoardConnectionFailure,
@@ -165,12 +152,12 @@ class BoardPairingException(
  * Owns the BLE link to the board: scanning, connecting, service discovery and characteristic
  * reads.
  *
- * Threading: Android delivers every GATT callback on a binder thread and permits only one
+ * Android delivers every GATT callback on a binder thread and permits only one
  * outstanding GATT operation at a time. Reads are therefore serialised behind [opMutex], with the
  * in-flight operation represented by a [CompletableDeferred] that the callback completes.
  *
- * This class is deliberately transport-only: it knows about bytes, not about chess. Packet
- * interpretation lives in [BoardPackets.kt] and the SCP mapping in [BleBoardModule].
+ * This class is deliberately transport-only, packet interpretation lives in [BoardPackets.kt] and
+ * the SCP mapping in [BleBoardModule].
  */
 @SuppressLint("MissingPermission") // Callers gate on BlePermissions before invoking.
 class BleBoardConnection(context: Context) {
@@ -202,9 +189,7 @@ class BleBoardConnection(context: Context) {
     /**
      * The board once it has been identified, retained across disconnections.
      *
-     * Remembering the device is what lets a reconnect skip the scan, and remembering the
-     * capabilities is what lets callers ask about the board while the link happens to be down -
-     * they are static metadata, not a live reading.
+     * Remembering the device is what lets a reconnect skip the scan.
      */
     @Volatile
     private var knownDevice: BluetoothDevice? = null
@@ -216,8 +201,7 @@ class BleBoardConnection(context: Context) {
      * The board's name as read while it was reachable.
      *
      * [BluetoothDevice.getName] returns null once there is nothing cached for a device that is no
-     * longer connected, so re-reading it on disconnection would swap the board's name for a generic
-     * label every time the link idles out.
+     * longer connected, this allows us to use the name when the link idles-out.
      */
     @Volatile
     private var knownDeviceName: String? = null
@@ -269,9 +253,7 @@ class BleBoardConnection(context: Context) {
             _state.value = BoardConnectionState.Scanning
             val device = withTimeout(scanTimeoutMs) { scanForBoard() }
 
-            // Before the link, not in response to a failed read: the board serves nothing over an
-            // unencrypted link, so an unpaired board fails at the first read with an
-            // authentication error that says nothing about what the user should do.
+            // The board serves nothing over an unencrypted link
             ensureBonded(device)
 
             _state.value = BoardConnectionState.Connecting(device.safeName())
@@ -280,7 +262,6 @@ class BleBoardConnection(context: Context) {
             val capsBytes = readCharacteristic(BoardBle.CAPABILITIES_UUID)
             when (val caps = parseCapabilities(capsBytes)) {
                 is PacketResult.Invalid -> {
-                    // The byte count alone rarely identifies the firmware; the hex does.
                     Log.w(
                         TAG,
                         "Rejected Capabilities (${capsBytes.size} bytes): ${capsBytes.toHex()}"
@@ -307,8 +288,7 @@ class BleBoardConnection(context: Context) {
             fail(e.message ?: "Pairing did not complete", kind = e.failure)
         } catch (e: BleAuthenticationException) {
             // The board was reached and paired, and still refused to be read: the pairing the OS
-            // holds is not one the board recognises. Firmware built with BLE security on rejects
-            // the bond a phone kept from before it was enabled.
+            // holds is not one the board recognises
             stopScan()
             close()
             fail(
@@ -424,14 +404,6 @@ class BleBoardConnection(context: Context) {
 
     /**
      * Pairs with the board unless the OS is already paired with it.
-     *
-     * Pairing is driven explicitly rather than left to the stack, which will raise security by
-     * itself when a read demands it. That implicit path is unusable here for two reasons: it is
-     * not observable, so there is no moment at which to tell the user a dialog is about to appear,
-     * and when it fails the only trace is an authentication error on a read.
-     *
-     * Waits on [BluetoothDevice.ACTION_BOND_STATE_CHANGED] because [BluetoothDevice.createBond]
-     * only reports that the request was accepted, not that pairing succeeded.
      */
     private suspend fun ensureBonded(device: BluetoothDevice) {
         if (device.bondState == BluetoothDevice.BOND_BONDED) return
@@ -448,8 +420,7 @@ class BleBoardConnection(context: Context) {
 
         // The outcome is polled rather than taken from ACTION_BOND_STATE_CHANGED. That broadcast
         // is the documented signal, but a receiver registered for it here never saw the board's
-        // transition on Android 16, which left a pairing that had in fact succeeded looking like
-        // one that never finished. The adapter's own bond state is authoritative, local, and cheap
+        // transition on Android 16. The adapter's own bond state is authoritative, local, and cheap
         // to ask, so it is asked directly.
         val bonded = try {
             withTimeout(BOND_TIMEOUT_MS) {
