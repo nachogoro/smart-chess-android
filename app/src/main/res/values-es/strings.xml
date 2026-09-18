@@ -100,6 +100,7 @@
     <!-- Pantalla de conexión -->
     <string name="connect_title">Conecta tu tablero</string>
     <string name="connect_searching">Buscando tu tablero. Asegúrate de que está encendido y cerca.</string>
+    <string name="connect_no_board_found">No se ha encontrado ningún tablero. Asegúrate de que está encendido y cerca, y vuelve a intentarlo.</string>
     <!-- El nombre que anuncia el tablero, o connect_the_board si no tiene. -->
     <string name="connect_connecting">Conectando con %1$s\u2026</string>
     <string name="connect_connected">Conectado a %1$s.</string>
@@ -191,7 +192,7 @@
     <string name="setup_preparing">Preparando la partida\u2026</string>
     <string name="setup_cancel">Cancelar</string>
     <string name="setup_back">Atrás</string>
-    <string name="setup_start_game">Empezar partida</string>
+    <string name="setup_start_game">Empezar</string>
     <string name="setup_local_title">Partida local</string>
     <string name="setup_local_explanation">Los dos jugadores comparten el tablero. Toca la pantalla cuando hayas terminado tu jugada.</string>
     <string name="setup_white_player">Jugador de blancas</string>
@@ -207,7 +208,7 @@
     <string name="setup_remote_explanation">Tu rival juega en línea. Mueve sus piezas en tu tablero según lleguen.</string>
     <string name="setup_account">Cuenta</string>
     <string name="setup_game">Partida</string>
-    <string name="setup_find_game">Buscar partida</string>
+    <string name="setup_find_game">Buscar rival</string>
     <string name="setup_choose_platform">Elige una plataforma</string>
     <string name="setup_use_clocks">Usar reloj</string>
     <string name="setup_fischer_increment">Incremento Fischer</string>
@@ -236,6 +237,8 @@
     <string name="history_next_move">Jugada siguiente</string>
     <string name="history_final_position">Posición final</string>
     <string name="history_pgn">PGN</string>
+    <string name="history_share">Compartir</string>
+    <string name="history_share_pgn">Compartir PGN</string>
     <string name="history_delete">Eliminar</string>
     <string name="history_close">Cerrar</string>
     <string name="history_delete_title">¿Eliminar esta partida?</string>

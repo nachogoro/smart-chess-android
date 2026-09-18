@@ -1,5 +1,7 @@
 package com.nachogoro.smartchess.ui.screens
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +23,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FirstPage
 import androidx.compose.material.icons.filled.LastPage
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
@@ -259,6 +262,13 @@ private fun GameDetail(game: GameRecord, onDelete: () -> Unit, onBack: () -> Uni
     }
 
     if (showPgn) {
+        val context = LocalContext.current
+        val players = stringResource(
+            R.string.history_players,
+            game.whiteName ?: stringResource(R.string.color_white),
+            game.blackName ?: stringResource(R.string.color_black),
+        )
+        val chooserTitle = stringResource(R.string.history_share_pgn)
         AlertDialog(
             onDismissRequest = { showPgn = false },
             title = { Text(stringResource(R.string.history_pgn)) },
@@ -277,6 +287,13 @@ private fun GameDetail(game: GameRecord, onDelete: () -> Unit, onBack: () -> Uni
                 }
             },
             confirmButton = { TextButton(onClick = { showPgn = false }) { Text(stringResource(R.string.history_close)) } },
+            dismissButton = {
+                TextButton(onClick = { sharePgn(context, game.toPgn(), subject = players, chooserTitle = chooserTitle) }) {
+                    Icon(Icons.Default.Share, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.history_share))
+                }
+            },
         )
     }
 
@@ -339,6 +356,24 @@ private fun MoveList(
             }
         }
     }
+}
+
+/**
+ * Hands the PGN to whichever app the user picks from the system share sheet.
+ *
+ * Sent as plain text rather than as a `.pgn` file so that every app that can take text - a chat,
+ * an email client, a notes app - is offered, which is the point of sharing over exporting. Chess
+ * apps that import PGN accept it pasted just the same. The subject is the pairing, for the apps
+ * that show one, such as email.
+ */
+private fun sharePgn(context: Context, pgn: String, subject: String, chooserTitle: String) {
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, subject)
+        putExtra(Intent.EXTRA_TEXT, pgn)
+    }
+    // The chooser is always resolvable, even with nothing to offer, so this cannot throw.
+    context.startActivity(Intent.createChooser(send, chooserTitle))
 }
 
 /** `12.` for White's move, `12...` for Black's. */

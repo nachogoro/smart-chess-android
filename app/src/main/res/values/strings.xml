@@ -109,6 +109,7 @@
     <!-- Connection screen -->
     <string name="connect_title">Connect your board</string>
     <string name="connect_searching">Looking for your board. Make sure it is switched on and close by.</string>
+    <string name="connect_no_board_found">No board found. Make sure it is switched on and close by, then try again.</string>
     <!-- The board\'s advertised name, or connect_the_board when it has none. -->
     <string name="connect_connecting">Connecting to %1$s\u2026</string>
     <string name="connect_connected">Connected to %1$s.</string>
@@ -245,6 +246,8 @@
     <string name="history_next_move">Next move</string>
     <string name="history_final_position">Final position</string>
     <string name="history_pgn">PGN</string>
+    <string name="history_share">Share</string>
+    <string name="history_share_pgn">Share PGN</string>
     <string name="history_delete">Delete</string>
     <string name="history_close">Close</string>
     <string name="history_delete_title">Delete this game?</string>

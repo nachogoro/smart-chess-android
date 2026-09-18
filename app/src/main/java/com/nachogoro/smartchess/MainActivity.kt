@@ -4,7 +4,11 @@ import android.os.Bundle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,8 +36,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             SmartChessTheme {
+                // The window is edge-to-edge (mandatory from Android 15 with targetSdk 35), so the
+                // Surface paints the whole window, bars included, and the content is inset once
+                // here, past the system bars, the display cutout and the keyboard, rather than in
+                // every screen. No screen uses a Scaffold, so nothing else would apply the insets.
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    SmartChessApp()
+                    Box(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+                        SmartChessApp()
+                    }
                 }
             }
         }

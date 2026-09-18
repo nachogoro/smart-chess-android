@@ -128,12 +128,20 @@ sealed interface BoardConnectionState {
 /**
  * Why a connection attempt failed, as a code rather than a sentence.
  *
- * Only the pairing failures are enumerated, because they are the ones the user fixes from outside
- * the app and each needs different advice. [STALE_BOND] in particular cannot be told apart from
+ * Only the failures the user fixes from outside the app are enumerated, because each needs
+ * different advice and the advice is the UI's to word, in the user's language. Everything else
+ * is [GENERIC] and carries a diagnostic. [STALE_BOND] in particular cannot be told apart from
  * [PAIRING_REFUSED] by the error the stack reports - only by whether a pairing already exists -
  * and the two call for opposite actions: pair again, versus delete the pairing first.
  */
-enum class BoardConnectionFailure { GENERIC, PAIRING_REFUSED, PAIRING_TIMED_OUT, STALE_BOND }
+enum class BoardConnectionFailure {
+    GENERIC,
+    BLUETOOTH_OFF,
+    NO_BOARD_FOUND,
+    PAIRING_REFUSED,
+    PAIRING_TIMED_OUT,
+    STALE_BOND,
+}
 
 /** Raised when a GATT operation fails; surfaced to the SCP layer as a BoardError. */
 open class BleOperationException(message: String) : Exception(message)
@@ -248,7 +256,7 @@ class BleBoardConnection(context: Context) {
         val adapter = adapter
             ?: return fail("This device has no Bluetooth adapter", recoverable = false)
         if (!adapter.isEnabled) {
-            return fail("Bluetooth is switched off")
+            return fail("Bluetooth is switched off", kind = BoardConnectionFailure.BLUETOOTH_OFF)
         }
 
         // A board already identified can be re-reached directly; scanning again would cost seconds
@@ -292,7 +300,7 @@ class BleBoardConnection(context: Context) {
         } catch (_: TimeoutCancellationException) {
             stopScan()
             close()
-            fail("No board found. Make sure it is powered on and nearby.")
+            fail("No board found", kind = BoardConnectionFailure.NO_BOARD_FOUND)
         } catch (e: BoardPairingException) {
             stopScan()
             close()

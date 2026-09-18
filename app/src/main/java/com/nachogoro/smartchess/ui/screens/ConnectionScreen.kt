@@ -1,7 +1,10 @@
 package com.nachogoro.smartchess.ui.screens
 
 import android.bluetooth.BluetoothAdapter
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.nachogoro.smartchess.R
 import com.nachogoro.smartchess.ble.BlePermissions
 import com.nachogoro.smartchess.ble.BoardConnectionFailure
@@ -78,6 +83,24 @@ fun ConnectionScreen(
     val enableBluetoothLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { refreshRequirements() }
+
+    // The radio is toggled from quick settings as often as from the button here, and the system
+    // dialog reports back while the adapter is still turning on, so the launcher's result alone
+    // would leave this screen believing Bluetooth is off after it came up.
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) = refreshRequirements()
+        }
+        // Exported, because the broadcast comes from the system rather than from this app, and
+        // Android 13 does not deliver system broadcasts to a receiver registered as not exported.
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
+            ContextCompat.RECEIVER_EXPORTED,
+        )
+        onDispose { context.unregisterReceiver(receiver) }
+    }
 
     // Navigate onwards as soon as the board is usable. An idle link still counts: the board is
     // identified, and the first read of the game reconnects it.
@@ -155,6 +178,15 @@ fun ConnectionScreen(
             // The connection layer reports a code for what only the user can fix, and its own
             // message for everything else, which is diagnostic rather than advice.
             state is BoardConnectionState.Failed -> when (state.kind) {
+                // Only reached once the radio is back on, since the check above wins while it is
+                // off: the attempt failed for a reason that no longer holds, so it is not a failure
+                // to report.
+                BoardConnectionFailure.BLUETOOTH_OFF ->
+                    stringResource(R.string.connect_ready)
+
+                BoardConnectionFailure.NO_BOARD_FOUND ->
+                    stringResource(R.string.connect_no_board_found)
+
                 BoardConnectionFailure.PAIRING_REFUSED ->
                     stringResource(R.string.connect_pairing_refused)
 
@@ -229,8 +261,12 @@ fun ConnectionScreen(
                         onClick = onConnect,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
+                        // A failure for the radio being off is not one to retry: Bluetooth is on
+                        // by the time this button shows, so this is a first attempt again.
+                        val retrying = state is BoardConnectionState.Failed &&
+                            state.kind != BoardConnectionFailure.BLUETOOTH_OFF
                         Text(
-                            if (state is BoardConnectionState.Failed) stringResource(R.string.connect_try_again)
+                            if (retrying) stringResource(R.string.connect_try_again)
                             else stringResource(R.string.connect_find_board)
                         )
                     }
