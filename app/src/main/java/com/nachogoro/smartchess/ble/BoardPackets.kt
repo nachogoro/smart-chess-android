@@ -4,12 +4,6 @@ import java.util.UUID
 
 /**
  * Wire format of the BLE chess board, protocol V1.
- *
- * The board is a passive sensor: it reports the observed state of the 64 squares and nothing
- * else. It does not know the rules, does not validate moves, and does not distinguish piece
- * types, only colour. All game logic lives in this app.
- *
- * See `GUIA_APP_MOVIL_BLE_CHESSBOARD_V1-0-0_ES.md` for the normative description.
  */
 object BoardBle {
     val SERVICE_UUID: UUID = UUID.fromString("7b6a0001-9f3d-4c2a-8a1e-2f6b8c9d1000")
@@ -29,8 +23,7 @@ object BoardBle {
     const val BOARD_STATE_LENGTH = 18
 
     /**
-     * Size of the Capabilities header this app reads. A board may send a longer packet; the extra
-     * bytes are not ours to interpret.
+     * Size of the Capabilities header this app reads.
      */
     const val CAPABILITIES_MIN_LENGTH = 10
 }
@@ -99,9 +92,8 @@ data class BoardStatusPacket(
 /**
  * Parses an 18-byte `BoardState` packet into a map of algebraic square name to reading.
  *
- * Square order on the wire is a8, b8 ... h8, a7 ... h1 - that is, the packet starts at rank 8
- * (Black's back rank) and ends at rank 1. Each byte holds four squares, two bits each, least
- * significant bits first.
+ * Square order on the wire is a8, b8 ... h8, a7 ... h1.
+ * Each byte holds four squares, two bits each, least significant bits first.
  */
 fun parseBoardState(packet: ByteArray): PacketResult<Map<String, SquareReading>> {
     if (packet.size != BoardBle.BOARD_STATE_LENGTH) {
@@ -132,10 +124,8 @@ fun parseBoardState(packet: ByteArray): PacketResult<Map<String, SquareReading>>
 /**
  * Parses a `Capabilities` packet and validates the fields this app depends on.
  *
- * Only the first [BoardBle.CAPABILITIES_MIN_LENGTH] bytes are read, and a longer packet is
- * accepted: compatibility is decided by the protocol version and the field checks below, so a
- * firmware that appends its own fields to the header is still usable. A board that genuinely does
- * not fit is rejected on content, which says more than a byte count would.
+ * Only the first [BoardBle.CAPABILITIES_MIN_LENGTH] bytes are read, but longer packets are
+ * accepted.
  */
 fun parseCapabilities(packet: ByteArray): PacketResult<BoardCapabilitiesPacket> {
     if (packet.size < BoardBle.CAPABILITIES_MIN_LENGTH) {
@@ -202,7 +192,7 @@ fun parseStatus(packet: ByteArray): PacketResult<BoardStatusPacket> {
     )
 }
 
-/** Converts a (row, col) pair - row 0 being rank 8 - to an algebraic square name such as "e4". */
+/** Converts a (row, col) pair (row 0 being rank 8) to an algebraic square name such as "e4". */
 private fun squareName(row: Int, col: Int): String {
     val file = 'a' + col
     val rank = 8 - row
