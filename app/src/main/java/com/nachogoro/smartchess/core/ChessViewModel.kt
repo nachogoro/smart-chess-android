@@ -77,7 +77,6 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
      * The main menu is derived from these, so a build without an engine adapter simply does not
      * offer engine play.
      */
-    // Carballo first: it needs no network, so it is the one that always works.
     private val engines: List<EngineAdapterModule> =
         listOf(CarballoAdapter(), RemoteStockfishAdapter())
     private val remotes: List<RemoteAdapterModule> = listOf(LichessAdapter(moduleScope))
@@ -130,13 +129,12 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
 
         // Record a game the moment the orchestrator reports it finished, rather than when the user
         // dismisses the result dialog: otherwise a game is lost if the app dies at the board.
-        // Re-recording the same game is harmless: records are keyed by game id and replaced.
+        // Re-recording the same game is harmless, as records are keyed by game id and replaced.
         viewModelScope.launch {
             uiModule.gameEnded.collect { historyRepository.record(it) }
         }
 
-        // Announced from here rather than from the game screen: the move is spoken because it
-        // happened, not because something is on screen to show it.
+        // Announced from here rather than from the game screen (the move happened, regardless of screen).
         viewModelScope.launch {
             uiModule.opponentMoved.collect { move ->
                 if (settings.value.announceOpponentMoves) speaker.announce(move)
@@ -235,15 +233,10 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * The player has finished moving on the physical board.
-     *
-     * This is the equivalent of pressing the clock: the orchestrator reads the board and works out
-     * what was played.
      */
     fun signalMoveReady() {
         val session = _session.value ?: return
         val color = requesterColor(session) ?: return
-        // Pins what the app believed before the board is read. Paired with the reading that comes
-        // back, it is what makes a disagreement between the two legible after the fact.
         Log.i(CHESS_LOG_TAG, "Move ready; expecting one move from ${session.fen}")
         viewModelScope.launch { uiModule.signalMoveReady(session.gameId, color) }
     }
@@ -262,9 +255,6 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
      * belong to whoever is to move. In an engine or remote game there is only one person here to
      * tap them. The protocol asks the UI for this because only the UI knows how the tap was made,
      * and the orchestrator resigns exactly the colour it is given, so this decides who loses.
-     *
-     * Null between turns, when there is nobody to name; the tap is then dropped rather than sent
-     * with a guess.
      */
     private fun requesterColor(session: GameSession): Color? = when (session.mode) {
         GameMode.LOCAL -> (_orchestratorState.value as? OrchestratorState.AwaitingPlayerMove)?.color
