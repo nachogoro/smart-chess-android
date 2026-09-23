@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GridOn
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -47,6 +46,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nachogoro.smartchess.R
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import com.nachogoro.smartchess.ui.PendingRequest
+import scp.protocol.DrawOffer
+import scp.protocol.GameSummary
 import com.nachogoro.smartchess.ui.AndroidUIModule
 import com.nachogoro.smartchess.ui.describe
 import com.nachogoro.smartchess.ui.components.BoardPiece
@@ -103,8 +107,6 @@ fun GameScreen(
     val blackMs = rememberDisplayedClock(shown?.clocks?.blackMs, turnColor == ChessColor.BLACK, incrementMs)
     val clocks = SideClocks(whiteMs, blackMs)
 
-    GameDialogs(uiModule, onGameEnd)
-
     // The whole screen is the "I have moved" target, clocks included: a player ending their move
     // reaches for the clock, exactly as on a real chess clock, and the on-screen hint promises "tap
     // anywhere". Buttons nested below still consume their own taps. Feedback is suppressed to keep
@@ -122,7 +124,7 @@ fun GameScreen(
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
-                enabled = awaitingPlayer,
+                enabled = awaitingPlayer && !uiModule.hasPendingPrompt(),
                 onClick = onMoveReady,
             )
     ) {
@@ -140,6 +142,7 @@ fun GameScreen(
                 onResign = onResign,
                 onOfferDraw = onOfferDraw,
                 onAbort = onAbort,
+                onGameEnd = onGameEnd,
                 modifier = Modifier.fillMaxWidth().weight(1f),
             )
 
@@ -157,6 +160,7 @@ fun GameScreen(
                 onResign = onResign,
                 onOfferDraw = onOfferDraw,
                 onAbort = onAbort,
+                onGameEnd = onGameEnd,
                 modifier = Modifier.fillMaxWidth().weight(1f),
             )
         }
@@ -189,6 +193,7 @@ private fun PlayerHalf(
     onResign: (ChessColor) -> Unit,
     onOfferDraw: () -> Unit,
     onAbort: () -> Unit,
+    onGameEnd: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showBoard by remember { mutableStateOf(false) }
@@ -204,85 +209,92 @@ private fun PlayerHalf(
     }
 
     Surface(color = background, modifier = modifier) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .rotate(if (rotated) 180f else 0f)
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Box(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                contentAlignment = Alignment.Center,
+        Box(modifier = Modifier.fillMaxSize().rotate(if (rotated) 180f else 0f)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                if (showBoard) {
-                    ChessBoardView(
-                        // The live session, then the finished game: the final position is worth
-                        // still being able to check once the orchestrator has let the game go.
-                        fen = uiModule.lastGameSummary?.finalFen ?: session?.fen ?: STARTING_FEN,
-                        // Seen from this half's side of the table.
-                        flipped = color == ChessColor.BLACK,
-                    )
-                } else {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(color.playerName(session), style = MaterialTheme.typography.labelLarge)
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = remaining?.formatClock() ?: "--:--",
-                            fontSize = 56.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
+                Box(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (showBoard) {
+                        ChessBoardView(
+                            // The live session, then the finished game: the final position is worth
+                            // still being able to check once the orchestrator has let the game go.
+                            fen = uiModule.lastGameSummary?.finalFen ?: session?.fen ?: STARTING_FEN,
+                            // Seen from this half's side of the table.
+                            flipped = color == ChessColor.BLACK,
                         )
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(color.playerName(session), style = MaterialTheme.typography.labelLarge)
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = remaining?.formatClock() ?: "--:--",
+                                fontSize = 56.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace,
+                            )
+                        }
                     }
                 }
-            }
 
-            // The far clock is upside down from here, so its time is repeated the right way up.
-            // With the position on show it stands in for this player's own clock as well.
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                if (showBoard) MiniClock(color, session, clocks, turnColor)
-                MiniClock(color.opposite(), session, clocks, turnColor)
+                // The far clock is upside down from here, so its time is repeated the right way up.
+                // With the position on show it stands in for this player's own clock as well.
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    if (showBoard) MiniClock(color, session, clocks, turnColor)
+                    MiniClock(color.opposite(), session, clocks, turnColor)
+                }
+
+                if (present) {
+                    // Errors and desyncs concern both players, and in a game with only one of them
+                    // at the board this is the only half there is to show them in.
+                    NotificationArea(uiModule)
+
+                    StatusLine(color, session, orchestratorState)
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Deliberately understated: checking the board is occasionally useful, never
+                        // the point.
+                        IconButton(onClick = { showBoard = !showBoard }) {
+                            Icon(
+                                Icons.Default.GridOn,
+                                contentDescription = if (showBoard) {
+                                    stringResource(R.string.game_hide_board)
+                                } else {
+                                    stringResource(R.string.game_show_board)
+                                },
+                                tint = if (showBoard) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
+                        }
+
+                        // The protocol's draw request carries no colour: the orchestrator takes it as
+                        // the side to move's, so in a local game only that side's button can mean it.
+                        // That is also when the rules allow the offer, after moving and before
+                        // pressing the clock.
+                        val canOfferDraw = session?.mode != GameMode.LOCAL ||
+                            (orchestratorState is OrchestratorState.AwaitingPlayerMove && isActive)
+                        TextButton(onClick = onOfferDraw, enabled = canOfferDraw) {
+                            Text(stringResource(R.string.game_draw))
+                        }
+                        // Resign names its colour, so it is whoever's half it is pressed in, at any time.
+                        TextButton(onClick = { onResign(color) }) { Text(stringResource(R.string.game_resign)) }
+                        if (session?.mode == GameMode.REMOTE) {
+                            TextButton(onClick = onAbort) { Text(stringResource(R.string.game_abort)) }
+                        }
+                    }
+                }
             }
 
             if (present) {
-                if (!rotated) NotificationArea(uiModule)
-
-                StatusLine(color, session, orchestratorState)
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Deliberately understated: checking the board is occasionally useful, never
-                    // the point.
-                    IconButton(onClick = { showBoard = !showBoard }) {
-                        Icon(
-                            Icons.Default.GridOn,
-                            contentDescription = if (showBoard) {
-                                stringResource(R.string.game_hide_board)
-                            } else {
-                                stringResource(R.string.game_show_board)
-                            },
-                            tint = if (showBoard) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        )
-                    }
-
-                    // The protocol's draw request carries no colour: the orchestrator takes it as
-                    // the side to move's, so in a local game only that side's button can mean it.
-                    // That is also when the rules allow the offer, after moving and before
-                    // pressing the clock.
-                    val canOfferDraw = session?.mode != GameMode.LOCAL ||
-                        (orchestratorState is OrchestratorState.AwaitingPlayerMove && isActive)
-                    TextButton(onClick = onOfferDraw, enabled = canOfferDraw) {
-                        Text(stringResource(R.string.game_draw))
-                    }
-                    // Resign names its colour, so it is whoever's half it is pressed in, at any time.
-                    TextButton(onClick = { onResign(color) }) { Text(stringResource(R.string.game_resign)) }
-                    if (session?.mode == GameMode.REMOTE) {
-                        TextButton(onClick = onAbort) { Text(stringResource(R.string.game_abort)) }
-                    }
-                }
+                PromptOverlay(color = color, isNear = !rotated, uiModule = uiModule, onGameEnd = onGameEnd)
             }
         }
     }
@@ -463,93 +475,137 @@ private fun NotificationArea(uiModule: AndroidUIModule) {
     }
 }
 
+/** Whether any prompt is waiting on a player, which is no time for a tap to count as a move. */
+private fun AndroidUIModule.hasPendingPrompt(): Boolean =
+    pendingPromotion != null || pendingDisambiguation != null ||
+        pendingDrawResponse != null || lastGameSummary != null
+
+/**
+ * Whatever the player of [color] has to answer before play goes on, drawn over their half so that
+ * it faces them. A prompt goes to the player it is for rather than to whoever sits at the bottom
+ * edge; the result goes to both.
+ */
 @Composable
-private fun GameDialogs(uiModule: AndroidUIModule, onGameEnd: () -> Unit) {
-    // Promotion: the board cannot tell a queen from a knight, so the player must say.
-    uiModule.pendingPromotion?.let { request ->
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text(stringResource(R.string.game_promotion_question)) },
-            text = {
-                // Pictures rather than names: the player has just put one of these on the board,
-                // and four words do not fit across a dialog - "Knight" was wrapping to one letter
-                // per line. They are shown in the promoting player's own colour.
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    for (piece in PromotionPiece.entries) {
-                        // A quarter of the dialog each, kept square. Fixed sizes would overflow
-                        // the narrowest dialog a small screen allows.
-                        PieceTile(
-                            piece = BoardPiece(piece.boardType(), request.input.color),
-                            contentDescription = piece.displayName(),
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f)
-                                .clip(MaterialTheme.shapes.small)
-                                .clickable { request.complete(piece) },
-                        )
-                    }
-                }
-            },
-            // The pieces are the buttons; there is nothing left to confirm.
-            confirmButton = {},
-        )
+private fun PromptOverlay(
+    color: ChessColor,
+    isNear: Boolean,
+    uiModule: AndroidUIModule,
+    onGameEnd: () -> Unit,
+) {
+    // Promotion and disambiguation are about the move just made, so they go to its player.
+    val promotion = uiModule.pendingPromotion?.takeIf { it.input.color == color }
+    val disambiguation = uiModule.pendingDisambiguation?.takeIf { it.input.color == color }
+    // A draw offer goes to the side it was made to. An offer from nobody in particular can only
+    // be answered by the phone's owner.
+    val drawResponse = uiModule.pendingDrawResponse?.takeIf { request ->
+        request.input.color?.let { it.opposite() == color } ?: isNear
     }
+    val summary = uiModule.lastGameSummary
 
-    // Two legal moves can produce the same physical arrangement; only the player knows which.
-    uiModule.pendingDisambiguation?.let { request ->
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text(stringResource(R.string.game_disambiguation_title)) },
-            text = { Text(stringResource(R.string.game_disambiguation_explanation)) },
-            confirmButton = {
-                Column {
-                    for (move in request.input.moves) {
-                        TextButton(onClick = { request.complete(move) }) { Text(move) }
-                    }
+    if (promotion == null && disambiguation == null && drawResponse == null && summary == null) return
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f))
+            // Taps around the card belong to neither the controls underneath nor the screen.
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+            .padding(16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                when {
+                    promotion != null -> PromotionPrompt(promotion)
+                    disambiguation != null -> DisambiguationPrompt(disambiguation)
+                    drawResponse != null -> DrawResponsePrompt(drawResponse)
+                    summary != null -> GameOverPrompt(summary, onGameEnd)
                 }
-            },
-        )
+            }
+        }
     }
+}
 
-    uiModule.pendingDrawResponse?.let { request ->
-        AlertDialog(
-            onDismissRequest = { request.complete(false) },
-            title = { Text(stringResource(R.string.game_draw_offered_title)) },
-            text = {
-                Text(stringResource(R.string.game_draw_offered, request.input.describe(LocalContext.current)))
-            },
-            confirmButton = { Button(onClick = { request.complete(true) }) { Text(stringResource(R.string.game_accept)) } },
-            dismissButton = {
-                OutlinedButton(onClick = { request.complete(false) }) { Text(stringResource(R.string.game_decline)) }
-            },
-        )
+// Promotion: the board cannot tell a queen from a knight, so the player must say.
+@Composable
+private fun PromotionPrompt(request: PendingRequest<AndroidUIModule.PromotionContext, PromotionPiece>) {
+    Text(stringResource(R.string.game_promotion_question), style = MaterialTheme.typography.titleMedium)
+    Spacer(Modifier.height(12.dp))
+    // Pictures rather than names: the player has just put one of these on the board, and four
+    // words do not fit across a card - "Knight" was wrapping to one letter per line. They are
+    // shown in the promoting player's own colour.
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        for (piece in PromotionPiece.entries) {
+            // A quarter of the card each, kept square. Fixed sizes would overflow the narrowest
+            // card a small screen allows.
+            PieceTile(
+                piece = BoardPiece(piece.boardType(), request.input.color),
+                contentDescription = piece.displayName(),
+                modifier = Modifier
+                    .weight(1f)
+                    .aspectRatio(1f)
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable { request.complete(piece) },
+            )
+        }
     }
+}
 
-    uiModule.lastGameSummary?.let { summary ->
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text(stringResource(R.string.game_over_title)) },
-            text = {
-                Column {
-                    Text(summary.result.protocolString, style = MaterialTheme.typography.headlineSmall)
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        summary.termination.describe(LocalContext.current, summary.result),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        stringResource(R.string.game_moves_played, summary.moves.size),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            },
-            confirmButton = { Button(onClick = onGameEnd) { Text(stringResource(R.string.game_done)) } },
-        )
+// Two legal moves can produce the same physical arrangement; only the player knows which.
+@Composable
+private fun DisambiguationPrompt(request: PendingRequest<AndroidUIModule.DisambiguationContext, String>) {
+    Text(stringResource(R.string.game_disambiguation_title), style = MaterialTheme.typography.titleMedium)
+    Spacer(Modifier.height(8.dp))
+    Text(stringResource(R.string.game_disambiguation_explanation), style = MaterialTheme.typography.bodyMedium)
+    for (move in request.input.moves) {
+        TextButton(onClick = { request.complete(move) }) { Text(move) }
+    }
+}
+
+@Composable
+private fun DrawResponsePrompt(request: PendingRequest<DrawOffer, Boolean>) {
+    Text(stringResource(R.string.game_draw_offered_title), style = MaterialTheme.typography.titleMedium)
+    Spacer(Modifier.height(8.dp))
+    Text(
+        stringResource(R.string.game_draw_offered, request.input.describe(LocalContext.current)),
+        style = MaterialTheme.typography.bodyMedium,
+    )
+    Spacer(Modifier.height(12.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+    ) {
+        OutlinedButton(onClick = { request.complete(false) }) { Text(stringResource(R.string.game_decline)) }
+        Button(onClick = { request.complete(true) }) { Text(stringResource(R.string.game_accept)) }
+    }
+}
+
+@Composable
+private fun GameOverPrompt(summary: GameSummary, onGameEnd: () -> Unit) {
+    Text(stringResource(R.string.game_over_title), style = MaterialTheme.typography.titleMedium)
+    Spacer(Modifier.height(8.dp))
+    Text(summary.result.protocolString, style = MaterialTheme.typography.headlineSmall)
+    Spacer(Modifier.height(8.dp))
+    Text(
+        summary.termination.describe(LocalContext.current, summary.result),
+        style = MaterialTheme.typography.bodyMedium,
+    )
+    Spacer(Modifier.height(8.dp))
+    Text(
+        stringResource(R.string.game_moves_played, summary.moves.size),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(12.dp))
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        Button(onClick = onGameEnd) { Text(stringResource(R.string.game_done)) }
     }
 }
 
