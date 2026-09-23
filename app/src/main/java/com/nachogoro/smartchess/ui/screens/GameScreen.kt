@@ -106,13 +106,16 @@ fun GameScreen(
                 onClick = onMoveReady,
             )
     ) {
+        // The phone lies with its bottom edge towards whoever owns it, so their clock goes there,
+        // the right way up, and the far one is turned to read from across the board. A local game
+        // has two owners; White takes the near side there, as the board is usually set up.
+        val nearColor = session?.playerColor ?: ChessColor.WHITE
+
         Column(modifier = Modifier.fillMaxSize()) {
-            // Black's clock is rotated so it reads correctly from the far side of the board.
-            ClockPanel(
-                label = session?.blackName ?: stringResource(R.string.color_black),
-                timeMs = session?.clocks?.blackMs,
-                isActive = turnColor == ChessColor.BLACK,
-                incrementMs = session?.timeControl?.incrementMs ?: 0L,
+            SideClock(
+                color = nearColor.opposite(),
+                session = session,
+                turnColor = turnColor,
                 rotated = true,
                 modifier = Modifier.fillMaxWidth().weight(1f),
             )
@@ -129,11 +132,10 @@ fun GameScreen(
                 onAbort = onAbort,
             )
 
-            ClockPanel(
-                label = session?.whiteName ?: stringResource(R.string.color_white),
-                timeMs = session?.clocks?.whiteMs,
-                isActive = turnColor == ChessColor.WHITE,
-                incrementMs = session?.timeControl?.incrementMs ?: 0L,
+            SideClock(
+                color = nearColor,
+                session = session,
+                turnColor = turnColor,
                 rotated = false,
                 modifier = Modifier.fillMaxWidth().weight(1f),
             )
@@ -232,6 +234,25 @@ private fun CenterPanel(
             }
         }
     }
+}
+
+@Composable
+private fun SideClock(
+    color: ChessColor,
+    session: GameSession?,
+    turnColor: ChessColor?,
+    rotated: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val white = color == ChessColor.WHITE
+    ClockPanel(
+        label = (if (white) session?.whiteName else session?.blackName) ?: color.displayName(),
+        timeMs = if (white) session?.clocks?.whiteMs else session?.clocks?.blackMs,
+        isActive = turnColor == color,
+        incrementMs = session?.timeControl?.incrementMs ?: 0L,
+        rotated = rotated,
+        modifier = modifier,
+    )
 }
 
 /**
@@ -462,6 +483,9 @@ private fun GameDialogs(uiModule: AndroidUIModule, onGameEnd: () -> Unit) {
         )
     }
 }
+
+private fun ChessColor.opposite(): ChessColor =
+    if (this == ChessColor.WHITE) ChessColor.BLACK else ChessColor.WHITE
 
 @Composable
 private fun ChessColor.displayName(): String =
