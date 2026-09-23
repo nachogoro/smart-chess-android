@@ -253,20 +253,23 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { uiModule.signalMoveReady(session.gameId, color) }
     }
 
-    fun resign() {
+    /**
+     * [color] resigns. Each player's half of the game screen has its own Resign button, so which
+     * one was pressed says who is giving up, whoever is to move; the orchestrator resigns exactly
+     * the colour it is given.
+     */
+    fun resign(color: Color) {
         val session = this.session.value ?: return
-        val color = requesterColor(session) ?: return
         Log.i(CHESS_LOG_TAG, "Resigning ${session.gameId} on behalf of $color")
         viewModelScope.launch { uiModule.requestResign(session.gameId, color) }
     }
 
     /**
-     * Whose tap the Move Ready and Resign buttons are.
+     * Whose tap Move Ready is.
      *
-     * The screen has one of each, so in a local game, two people at one board and one phone, they
-     * belong to whoever is to move. In an engine or remote game there is only one person here to
-     * tap them. The protocol asks the UI for this because only the UI knows how the tap was made,
-     * and the orchestrator resigns exactly the colour it is given, so this decides who loses.
+     * The whole screen is one target, so in a local game, two people at one board and one phone,
+     * it belongs to whoever is to move. In an engine or remote game there is only one person here
+     * to tap it. The protocol asks the UI for this because only the UI knows how the tap was made.
      */
     private fun requesterColor(session: GameSession): Color? = when (session.mode) {
         GameMode.LOCAL -> (orchestratorState.value as? OrchestratorState.AwaitingPlayerMove)?.color
