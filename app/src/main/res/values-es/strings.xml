@@ -152,9 +152,7 @@
     <string name="game_seeking">Buscando rival\u2026</string>
     <string name="game_engine_thinking">El motor está pensando\u2026</string>
     <!-- De quién es el turno: blancas o negras. -->
-    <string name="game_to_move">Juegan %1$s</string>
     <string name="game_waiting_for">Esperando a %1$s\u2026</string>
-    <string name="game_move_then_tap">Mueve en el tablero y luego toca en cualquier sitio</string>
     <string name="game_show_board">Ver el tablero</string>
     <string name="game_hide_board">Ocultar el tablero</string>
     <string name="game_draw">Tablas</string>

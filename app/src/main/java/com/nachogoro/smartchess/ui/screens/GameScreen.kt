@@ -42,7 +42,6 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nachogoro.smartchess.R
@@ -254,7 +253,7 @@ private fun PlayerHalf(
                     // at the board this is the only half there is to show them in.
                     NotificationArea(uiModule)
 
-                    StatusLine(color, session, orchestratorState)
+                    StatusLine(session, orchestratorState)
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         // Deliberately understated: checking the board is occasionally useful, never
@@ -300,18 +299,18 @@ private fun PlayerHalf(
     }
 }
 
-/** The status line, with the "tap when done" hint for the half whose move it is. */
+/**
+ * What the game is doing, when the clocks do not already say it.
+ *
+ * Nothing is shown while a player at the board is to move: their clock is the one running, and
+ * that is all there is to know.
+ */
 @Composable
-private fun StatusLine(
-    color: ChessColor,
-    session: GameSession?,
-    orchestratorState: OrchestratorState,
-) {
+private fun StatusLine(session: GameSession?, orchestratorState: OrchestratorState) {
     val statusText = when (orchestratorState) {
         is OrchestratorState.Idle -> stringResource(R.string.game_waiting)
         is OrchestratorState.SeekingGame -> stringResource(R.string.game_seeking)
-        is OrchestratorState.AwaitingPlayerMove ->
-            stringResource(R.string.game_to_move, orchestratorState.color.displayName())
+        is OrchestratorState.AwaitingPlayerMove -> return
 
         // An engine is computing rather than merely absent, so say so - "waiting for Black"
         // reads like a stall when the phone is in fact busy searching.
@@ -329,16 +328,6 @@ private fun StatusLine(
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-
-    if (orchestratorState is OrchestratorState.AwaitingPlayerMove && orchestratorState.color == color) {
-        Spacer(Modifier.height(4.dp))
-        Text(
-            stringResource(R.string.game_move_then_tap),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center,
-        )
-    }
 }
 
 /** One side's time in a single line, for reading a clock that faces the other way. */
@@ -349,15 +338,19 @@ private fun MiniClock(
     clocks: SideClocks,
     turnColor: ChessColor?,
 ) {
-    Row(verticalAlignment = Alignment.Bottom) {
+    // Aligned on the text baseline: the name is set smaller than the time, so aligning their
+    // boxes leaves the name sitting visibly off the time's line.
+    Row {
         Text(
             color.playerName(session),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.alignByBaseline(),
         )
         Spacer(Modifier.width(6.dp))
         Text(
             clocks[color]?.formatClock() ?: "--:--",
+            modifier = Modifier.alignByBaseline(),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = if (turnColor == color) FontWeight.Bold else FontWeight.Normal,
             fontFamily = FontFamily.Monospace,

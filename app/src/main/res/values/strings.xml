@@ -161,9 +161,7 @@
     <string name="game_seeking">Looking for an opponent\u2026</string>
     <string name="game_engine_thinking">Engine is thinking\u2026</string>
     <!-- Whose turn it is: White or Black. -->
-    <string name="game_to_move">%1$s to move</string>
     <string name="game_waiting_for">Waiting for %1$s\u2026</string>
-    <string name="game_move_then_tap">Move on the board, then tap anywhere</string>
     <string name="game_show_board">Show board</string>
     <string name="game_hide_board">Hide board</string>
     <string name="game_draw">Draw</string>
