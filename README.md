@@ -185,3 +185,13 @@ The connection screen checks each requirement separately and prompts for whichev
 - [x] Play against an engine (Carballo on-device, or remote Stockfish)
 - [x] Play remotely (Lichess) — not yet exercised against the live service
 - [x] Games history with PGN and move-by-move replay
+
+## License
+
+Copyright (C) 2026 Nacho de Gorostidi
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU
+General Public License as published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
+
+The app bundles the [Carballo](https://github.com/albertoruibal/carballo) chess engine through `smart-chess-scp`, and Carballo is licensed under the GPL-3.0, so the app is distributed under the same license.
