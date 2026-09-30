@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import scp.engine.carballo.CarballoAdapter
@@ -151,6 +152,10 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
         // Re-recording the same game is harmless, as records are keyed by game id and replaced.
         viewModelScope.launch {
             uiModule.gameEnded.collect { historyRepository.record(it) }
+        }
+
+        viewModelScope.launch {
+            session.mapNotNull { it?.fen }.collect { uiModule.onPositionChanged(it) }
         }
 
         // Announced from here rather than from the game screen (the move happened, regardless of screen).

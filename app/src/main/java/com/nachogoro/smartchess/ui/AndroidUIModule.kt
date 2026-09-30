@@ -208,6 +208,30 @@ class AndroidUIModule : UIModule {
     fun clearGameSummary() { lastGameSummary = null }
 
     /**
+     * The game has moved on to [fen], whoever moved.
+     *
+     * A player's move is read off the board, so one that was accepted means the board was right by
+     * then, and a complaint about it still on screen would be stale. A desync stands until the game
+     * leaves the position it expected, rather than until the next change of any kind: the one
+     * raised when the board fails to play an opponent's move arrives just before the game reaches
+     * that move's position, and only the player's reply after it shows the board was put right.
+     */
+    fun onPositionChanged(fen: String) {
+        val left = position
+        position = fen
+        if (left == fen) return
+        if (desyncInfo?.expectedFen == left) desyncInfo = null
+        if (lastError?.isAboutTheBoard() == true) lastError = null
+    }
+
+    /** The last position [onPositionChanged] reported. */
+    private var position: String? = null
+
+    /** Whether [this] is something wrong with what the board showed when the player signalled. */
+    private fun UIMessage.isAboutTheBoard(): Boolean =
+        this is UIMessage.BoardUnchanged || this is UIMessage.BoardReadFailed || this is UIMessage.MoveRejected
+
+    /**
      * Cancels every pending setup request, unwinding the orchestrator's setup flow.
      *
      * Called when the user backs out of the setup screen. Without this the orchestrator would stay
