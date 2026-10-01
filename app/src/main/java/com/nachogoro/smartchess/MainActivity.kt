@@ -56,8 +56,6 @@ private fun SmartChessApp(viewModel: ChessViewModel = viewModel()) {
     val connectionState by viewModel.connectionState.collectAsState()
     val isConnecting by viewModel.isConnecting.collectAsState()
     val settings by viewModel.settings.collectAsState()
-    val session by viewModel.session.collectAsState()
-    val orchestratorState by viewModel.orchestratorState.collectAsState()
     val setupMode by viewModel.setupMode.collectAsState()
     val playedGames by viewModel.playedGames.collectAsState()
     val boardReading by viewModel.boardReading.collectAsState()
@@ -118,8 +116,6 @@ private fun SmartChessApp(viewModel: ChessViewModel = viewModel()) {
             // A game is in progress; the system back gesture must not silently abandon it.
             BackHandler { /* intentionally inert - use Resign or Abort */ }
             GameScreen(
-                session = session,
-                orchestratorState = orchestratorState,
                 uiModule = viewModel.uiModule,
                 onMoveReady = viewModel::signalMoveReady,
                 onResign = viewModel::resign,

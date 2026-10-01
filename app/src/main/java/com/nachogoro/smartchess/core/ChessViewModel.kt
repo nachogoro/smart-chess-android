@@ -17,6 +17,7 @@ import com.nachogoro.smartchess.data.GameRecord
 import com.nachogoro.smartchess.data.SettingsRepository
 import com.nachogoro.smartchess.speech.MoveSpeaker
 import com.nachogoro.smartchess.ui.AndroidUIModule
+import com.nachogoro.smartchess.ui.GameProgress
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,16 +26,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import scp.engine.carballo.CarballoAdapter
 import scp.engine.remote.RemoteStockfishAdapter
 import scp.game.GameController
 import scp.remote.lichess.LichessAdapter
-import scp.orchestrator.GameSession
 import scp.orchestrator.Orchestrator
-import scp.orchestrator.OrchestratorState
 import scp.protocol.Color
 import scp.protocol.EngineAdapterModule
 import scp.protocol.GameMode
@@ -135,9 +133,6 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
     private val _isReadingBoard = MutableStateFlow(false)
     val isReadingBoard: StateFlow<Boolean> = _isReadingBoard.asStateFlow()
 
-    val orchestratorState: StateFlow<OrchestratorState> = orchestrator.stateFlow
-    val session: StateFlow<GameSession?> = orchestrator.sessionFlow
-
     val availableModes: List<GameMode> = buildList {
         add(GameMode.LOCAL)
         if (engines.isNotEmpty()) add(GameMode.ENGINE)
@@ -152,10 +147,6 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
         // Re-recording the same game is harmless, as records are keyed by game id and replaced.
         viewModelScope.launch {
             uiModule.gameEnded.collect { historyRepository.record(it) }
-        }
-
-        viewModelScope.launch {
-            session.mapNotNull { it?.fen }.collect { uiModule.onPositionChanged(it) }
         }
 
         // Announced from here rather than from the game screen (the move happened, regardless of screen).
@@ -252,10 +243,10 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
      * The player has finished moving on the physical board.
      */
     fun signalMoveReady() {
-        val session = this.session.value ?: return
-        val color = requesterColor(session) ?: return
-        Log.i(CHESS_LOG_TAG, "Move ready; expecting one move from ${session.fen}")
-        viewModelScope.launch { uiModule.signalMoveReady(session.gameId, color) }
+        val game = uiModule.game ?: return
+        val color = requesterColor(game) ?: return
+        Log.i(CHESS_LOG_TAG, "Move ready; expecting one move from ${game.fen}")
+        viewModelScope.launch { uiModule.signalMoveReady(game.gameId, color) }
     }
 
     /**
@@ -264,9 +255,9 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
      * the colour it is given.
      */
     fun resign(color: Color) {
-        val session = this.session.value ?: return
-        Log.i(CHESS_LOG_TAG, "Resigning ${session.gameId} on behalf of $color")
-        viewModelScope.launch { uiModule.requestResign(session.gameId, color) }
+        val game = uiModule.game?.takeUnless { it.ended } ?: return
+        Log.i(CHESS_LOG_TAG, "Resigning ${game.gameId} on behalf of $color")
+        viewModelScope.launch { uiModule.requestResign(game.gameId, color) }
     }
 
     /**
@@ -276,18 +267,19 @@ class ChessViewModel(application: Application) : AndroidViewModel(application) {
      * it belongs to whoever is to move. In an engine or remote game there is only one person here
      * to tap it. The protocol asks the UI for this because only the UI knows how the tap was made.
      */
-    private fun requesterColor(session: GameSession): Color? = when (session.mode) {
-        GameMode.LOCAL -> (orchestratorState.value as? OrchestratorState.AwaitingPlayerMove)?.color
-        GameMode.ENGINE, GameMode.REMOTE -> session.playerColor
+    private fun requesterColor(game: GameProgress): Color? = when {
+        game.ended -> null
+        game.mode == GameMode.LOCAL -> game.turn
+        else -> game.playerColor
     }
 
     fun offerDraw() {
-        val gameId = session.value?.gameId ?: return
+        val gameId = uiModule.game?.takeUnless { it.ended }?.gameId ?: return
         viewModelScope.launch { uiModule.requestDraw(gameId) }
     }
 
     fun abort() {
-        val gameId = session.value?.gameId ?: return
+        val gameId = uiModule.game?.takeUnless { it.ended }?.gameId ?: return
         viewModelScope.launch { uiModule.requestAbort(gameId) }
     }
 

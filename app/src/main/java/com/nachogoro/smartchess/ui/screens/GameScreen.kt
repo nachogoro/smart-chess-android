@@ -51,14 +51,13 @@ import com.nachogoro.smartchess.ui.PendingRequest
 import scp.protocol.DrawOffer
 import scp.protocol.GameSummary
 import com.nachogoro.smartchess.ui.AndroidUIModule
+import com.nachogoro.smartchess.ui.GameProgress
 import com.nachogoro.smartchess.ui.describe
 import com.nachogoro.smartchess.ui.components.BoardPiece
 import com.nachogoro.smartchess.ui.components.ChessBoardView
 import com.nachogoro.smartchess.ui.components.PieceTile
 import com.nachogoro.smartchess.ui.components.STARTING_FEN
 import kotlinx.coroutines.delay
-import scp.orchestrator.GameSession
-import scp.orchestrator.OrchestratorState
 import scp.protocol.Color as ChessColor
 import scp.protocol.GameMode
 import scp.protocol.PieceType
@@ -79,8 +78,6 @@ import scp.protocol.PromotionPiece
  */
 @Composable
 fun GameScreen(
-    session: GameSession?,
-    orchestratorState: OrchestratorState,
     uiModule: AndroidUIModule,
     onMoveReady: () -> Unit,
     onResign: (ChessColor) -> Unit,
@@ -88,22 +85,16 @@ fun GameScreen(
     onAbort: () -> Unit,
     onGameEnd: () -> Unit,
 ) {
-    // The orchestrator drops the session when the game ends. Keeping the last one holds the layout
-    // still under the result, where the halves would otherwise swap for a player who was Black.
-    var lastSession by remember { mutableStateOf(session) }
-    if (session != null) lastSession = session
-    val shown = session ?: lastSession
+    // Still the finished game once it is over, which holds the layout still under the result, where
+    // the halves would otherwise swap for a player who was Black.
+    val game = uiModule.game
 
-    val awaitingPlayer = orchestratorState is OrchestratorState.AwaitingPlayerMove
-    val turnColor = when (orchestratorState) {
-        is OrchestratorState.AwaitingPlayerMove -> orchestratorState.color
-        is OrchestratorState.AwaitingOpponentMove -> orchestratorState.color
-        else -> null
-    }
+    val awaitingPlayer = game?.awaitsBoard == true
+    val turnColor = game?.takeUnless { it.ended }?.turn
 
-    val incrementMs = shown?.timeControl?.incrementMs ?: 0L
-    val whiteMs = rememberDisplayedClock(shown?.clocks?.whiteMs, turnColor == ChessColor.WHITE, incrementMs)
-    val blackMs = rememberDisplayedClock(shown?.clocks?.blackMs, turnColor == ChessColor.BLACK, incrementMs)
+    val incrementMs = game?.timeControl?.incrementMs ?: 0L
+    val whiteMs = rememberDisplayedClock(game?.clocks?.whiteMs, turnColor == ChessColor.WHITE, incrementMs)
+    val blackMs = rememberDisplayedClock(game?.clocks?.blackMs, turnColor == ChessColor.BLACK, incrementMs)
     val clocks = SideClocks(whiteMs, blackMs)
 
     // The whole screen is the "I have moved" target, clocks included: a player ending their move
@@ -115,7 +106,7 @@ fun GameScreen(
     // The phone lies with its bottom edge towards whoever owns it, so their half goes there, the
     // right way up, and the far one is turned to read from across the board. A local game has two
     // owners; White takes the near side there, as the board is usually set up.
-    val nearColor = shown?.playerColor ?: ChessColor.WHITE
+    val nearColor = game?.playerColor ?: ChessColor.WHITE
 
     Box(
         modifier = Modifier
@@ -131,10 +122,9 @@ fun GameScreen(
             PlayerHalf(
                 color = nearColor.opposite(),
                 // Nobody sits across from the phone in an engine or online game.
-                present = shown?.mode == GameMode.LOCAL,
+                present = game?.mode == GameMode.LOCAL,
                 rotated = true,
-                session = shown,
-                orchestratorState = orchestratorState,
+                game = game,
                 uiModule = uiModule,
                 clocks = clocks,
                 turnColor = turnColor,
@@ -151,8 +141,7 @@ fun GameScreen(
                 color = nearColor,
                 present = true,
                 rotated = false,
-                session = shown,
-                orchestratorState = orchestratorState,
+                game = game,
                 uiModule = uiModule,
                 clocks = clocks,
                 turnColor = turnColor,
@@ -184,8 +173,7 @@ private fun PlayerHalf(
     color: ChessColor,
     present: Boolean,
     rotated: Boolean,
-    session: GameSession?,
-    orchestratorState: OrchestratorState,
+    game: GameProgress?,
     uiModule: AndroidUIModule,
     clocks: SideClocks,
     turnColor: ChessColor?,
@@ -221,15 +209,13 @@ private fun PlayerHalf(
                 ) {
                     if (showBoard) {
                         ChessBoardView(
-                            // The live session, then the finished game: the final position is worth
-                            // still being able to check once the orchestrator has let the game go.
-                            fen = uiModule.lastGameSummary?.finalFen ?: session?.fen ?: STARTING_FEN,
+                            fen = game?.fen ?: STARTING_FEN,
                             // Seen from this half's side of the table.
                             flipped = color == ChessColor.BLACK,
                         )
                     } else {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(color.playerName(session), style = MaterialTheme.typography.labelLarge)
+                            Text(color.playerName(game), style = MaterialTheme.typography.labelLarge)
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 text = remaining?.formatClock() ?: "--:--",
@@ -244,8 +230,8 @@ private fun PlayerHalf(
                 // The far clock is upside down from here, so its time is repeated the right way up.
                 // With the position on show it stands in for this player's own clock as well.
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    if (showBoard) MiniClock(color, session, clocks, turnColor)
-                    MiniClock(color.opposite(), session, clocks, turnColor)
+                    if (showBoard) MiniClock(color, game, clocks, turnColor)
+                    MiniClock(color.opposite(), game, clocks, turnColor)
                 }
 
                 if (present) {
@@ -253,7 +239,7 @@ private fun PlayerHalf(
                     // at the board this is the only half there is to show them in.
                     NotificationArea(uiModule)
 
-                    StatusLine(session, orchestratorState)
+                    StatusLine(game, uiModule.isSeeking)
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         // Deliberately understated: checking the board is occasionally useful, never
@@ -278,14 +264,14 @@ private fun PlayerHalf(
                         // the side to move's, so in a local game only that side's button can mean it.
                         // That is also when the rules allow the offer, after moving and before
                         // pressing the clock.
-                        val canOfferDraw = session?.mode != GameMode.LOCAL ||
-                            (orchestratorState is OrchestratorState.AwaitingPlayerMove && isActive)
+                        val canOfferDraw = game?.mode != GameMode.LOCAL ||
+                            (game.awaitsBoard && isActive)
                         TextButton(onClick = onOfferDraw, enabled = canOfferDraw) {
                             Text(stringResource(R.string.game_draw))
                         }
                         // Resign names its colour, so it is whoever's half it is pressed in, at any time.
                         TextButton(onClick = { onResign(color) }) { Text(stringResource(R.string.game_resign)) }
-                        if (session?.mode == GameMode.REMOTE) {
+                        if (game?.mode == GameMode.REMOTE) {
                             TextButton(onClick = onAbort) { Text(stringResource(R.string.game_abort)) }
                         }
                     }
@@ -306,20 +292,16 @@ private fun PlayerHalf(
  * that is all there is to know.
  */
 @Composable
-private fun StatusLine(session: GameSession?, orchestratorState: OrchestratorState) {
-    val statusText = when (orchestratorState) {
-        is OrchestratorState.Idle -> stringResource(R.string.game_waiting)
-        is OrchestratorState.SeekingGame -> stringResource(R.string.game_seeking)
-        is OrchestratorState.AwaitingPlayerMove -> return
+private fun StatusLine(game: GameProgress?, isSeeking: Boolean) {
+    val statusText = when {
+        isSeeking -> stringResource(R.string.game_seeking)
+        game == null || game.ended -> stringResource(R.string.game_waiting)
+        game.awaitsBoard -> return
 
         // An engine is computing rather than merely absent, so say so - "waiting for Black"
         // reads like a stall when the phone is in fact busy searching.
-        is OrchestratorState.AwaitingOpponentMove ->
-            if (session?.mode == GameMode.ENGINE) {
-                stringResource(R.string.game_engine_thinking)
-            } else {
-                stringResource(R.string.game_waiting_for, orchestratorState.color.displayName())
-            }
+        game.mode == GameMode.ENGINE -> stringResource(R.string.game_engine_thinking)
+        else -> stringResource(R.string.game_waiting_for, game.turn.displayName())
     }
 
     Spacer(Modifier.height(8.dp))
@@ -334,7 +316,7 @@ private fun StatusLine(session: GameSession?, orchestratorState: OrchestratorSta
 @Composable
 private fun MiniClock(
     color: ChessColor,
-    session: GameSession?,
+    game: GameProgress?,
     clocks: SideClocks,
     turnColor: ChessColor?,
 ) {
@@ -342,7 +324,7 @@ private fun MiniClock(
     // boxes leaves the name sitting visibly off the time's line.
     Row {
         Text(
-            color.playerName(session),
+            color.playerName(game),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.alignByBaseline(),
@@ -606,8 +588,8 @@ private fun ChessColor.opposite(): ChessColor =
     if (this == ChessColor.WHITE) ChessColor.BLACK else ChessColor.WHITE
 
 @Composable
-private fun ChessColor.playerName(session: GameSession?): String =
-    (if (this == ChessColor.WHITE) session?.whiteName else session?.blackName) ?: displayName()
+private fun ChessColor.playerName(game: GameProgress?): String =
+    (if (this == ChessColor.WHITE) game?.whiteName else game?.blackName) ?: displayName()
 
 @Composable
 private fun ChessColor.displayName(): String =

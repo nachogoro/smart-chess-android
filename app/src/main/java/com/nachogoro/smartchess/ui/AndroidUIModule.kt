@@ -70,6 +70,13 @@ class AndroidUIModule : UIModule {
     var lastGameSummary by mutableStateOf<GameSummary?>(null)
         private set
 
+    /**
+     * The game being played, or the one just finished until the next starts, so the screen can
+     * hold still under the result. Null before the first.
+     */
+    var game by mutableStateOf<GameProgress?>(null)
+        private set
+
     data class PromotionContext(val move: String, val color: Color)
     data class DisambiguationContext(val moves: List<String>, val color: Color)
     data class DesyncInfo(val expectedFen: String, val message: UIMessage)
@@ -152,10 +159,19 @@ class AndroidUIModule : UIModule {
         Log.i(CHESS_LOG_TAG, "Game ${info.gameId} started (${info.mode}) from ${info.initialFen}")
         lastGameSummary = null
         lastGameStartedInfo = info
+        game = GameProgress.startedBy(info)
+        onPositionChanged(info.initialFen)
+    }
+
+    override suspend fun onMovePlayed(info: MovePlayedInfo) {
+        Log.i(CHESS_LOG_TAG, "${info.color} played ${info.san} (${info.move}); now ${info.fen}")
+        game = game?.after(info)
+        onPositionChanged(info.fen)
     }
 
     override suspend fun onGameEnded(summary: GameSummary) {
         Log.i(CHESS_LOG_TAG, "Game ended ${summary.result.protocolString} (${summary.termination.code})")
+        game = game?.copy(ended = true)
         lastGameSummary = summary
         _gameEnded.emit(summary)
     }
@@ -216,7 +232,7 @@ class AndroidUIModule : UIModule {
      * raised when the board fails to play an opponent's move arrives just before the game reaches
      * that move's position, and only the player's reply after it shows the board was put right.
      */
-    fun onPositionChanged(fen: String) {
+    private fun onPositionChanged(fen: String) {
         val left = position
         position = fen
         if (left == fen) return
